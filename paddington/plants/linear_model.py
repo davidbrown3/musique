@@ -1,12 +1,11 @@
-
-import numpy as np
-from dataclasses import dataclass
-from dataclasses_json import dataclass_json
-
 import json
 import os
-import control
 import typing
+from dataclasses import dataclass
+
+import control
+import numpy as np
+from dataclasses_json import dataclass_json
 
 
 @dataclass_json
@@ -25,7 +24,7 @@ class LinearModel:
         self.C = np.array(self.C)
         self.D = np.array(self.D)
         self.sys = control.ss(self.A, self.B, self.C, self.D)
-        self.discretize(dt=1)
+        self.discretize(dt=self.dt)
 
     def discretize(self, dt):
         self.sys_discrete = control.sample_system(self.sys, dt)
