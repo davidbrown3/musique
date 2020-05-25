@@ -21,7 +21,7 @@ dt = 0.01
 states_log = [states]
 ts = np.arange(0, 1e4) * dt
 
-for t in ts:
+for i, t in enumerate(ts):
     states = problem.step(x=states, u=np.array([[0]]), dt=dt)
     states_log.append(states)
 

@@ -48,6 +48,7 @@ class InvertedPendulum():
                 4/3 - self.mass_pendulum * angular_position_cos**2 / self.mass_total
             )
         ) - angular_velocity * self.angular_friction
+
         
         acceleration = (
             force + self.mass_pendulum * self.length * (
@@ -60,8 +61,8 @@ class InvertedPendulum():
             [angular_acceleration],
             [velocity],
             [acceleration]
-        ])
-
+        ])    
+        
     def step(self, x, u, dt):
         dx_dt = self.derivatives(x, u)
         return x + dx_dt * dt
