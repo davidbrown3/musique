@@ -1,5 +1,6 @@
 import numpy as np
 import plotly.graph_objects as go
+import torch
 
 from paddington.plants.nonlinear_model import InvertedPendulum
 
@@ -10,7 +11,7 @@ angular_velocity_0 = 0.0
 position_0 = 0.0
 velocity_0 = 0.0
 
-states = np.array([
+states = torch.Tensor([
     [angular_position_0],
     [angular_velocity_0],
     [position_0],
@@ -22,7 +23,9 @@ states_log = [states]
 ts = np.arange(0, 1e4) * dt
 
 for i, t in enumerate(ts):
-    states = problem.step(x=states, u=np.array([[0]]), dt=dt)
+    if i%10==0:
+        print(i)
+    states = problem.step(x=states, u=torch.Tensor([[0]]), dt=dt)
     states_log.append(states)
 
 fig = go.Figure()

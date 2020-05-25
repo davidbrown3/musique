@@ -1,6 +1,5 @@
-import jax.numpy as np
+import numpy as np
 import plotly.graph_objects as go
-from jax import jit
 
 from paddington.plants.nonlinear_model_static import simulate
 
@@ -10,7 +9,7 @@ fig = go.Figure()
 
 fig.add_trace(
     go.Scatter(
-        y=[np.rad2deg(x[0, 0]) for x in states]
+        y=[np.rad2deg(x[0]) for x in states]
     )
 )
 

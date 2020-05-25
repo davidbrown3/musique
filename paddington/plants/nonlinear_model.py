@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 
 
 class InvertedPendulum():
@@ -23,12 +23,12 @@ class InvertedPendulum():
 
     @staticmethod
     def decode_states(x):
-        x = np.squeeze(x)
+        x = torch.squeeze(x)
         return x[0], x[1], x[2], x[3]
 
     @staticmethod
     def decode_control(u):
-        u = np.squeeze(u)
+        u = torch.squeeze(u)
         return u
 
     def derivatives(self, x, u):
@@ -36,8 +36,8 @@ class InvertedPendulum():
         angular_position, angular_velocity, _, velocity = self.decode_states(x)
         force = self.decode_control(u)
 
-        angular_position_sin = np.sin(angular_position)
-        angular_position_cos = np.cos(angular_position)
+        angular_position_sin = torch.sin(angular_position)
+        angular_position_cos = torch.cos(angular_position)
 
         angular_acceleration = (
             self.gravity * angular_position_sin + angular_position_cos * (
@@ -56,7 +56,7 @@ class InvertedPendulum():
             ) 
         ) / self.mass_total
         
-        return np.array([
+        return torch.Tensor([
             [angular_velocity],
             [angular_acceleration],
             [velocity],

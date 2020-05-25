@@ -1,5 +1,4 @@
-import jax.numpy as np
-from jax import grad, jit
+import numpy as np
 
 
 def calculate_angular_acceleration(angular_position, angular_velocity, force, mass_pendulum, mass_cart, length, gravity, angular_friction):
@@ -48,9 +47,6 @@ def derivatives(angular_position, angular_velocity, position, velocity, force, m
     return angular_velocity, angular_acceleration, velocity, acceleration
 
 def step(X, u, mass_pendulum, mass_cart, length, gravity, angular_friction, dt):
-    
-    X = np.squeeze(X)
-    u = np.squeeze(u)
 
     angular_position = X[0] 
     angular_velocity = X[1] 
@@ -63,10 +59,10 @@ def step(X, u, mass_pendulum, mass_cart, length, gravity, angular_friction, dt):
     )
 
     dX = np.array([
-        [d_angular_position],
-        [d_angular_velocity],
-        [d_position],
-        [d_velocity]
+        d_angular_position,
+        *d_angular_velocity,
+        d_position,
+        *d_velocity
     ])
 
     return X + dX * dt
@@ -79,18 +75,20 @@ def simulate(mass_pendulum, mass_cart, length, gravity, angular_friction, dt):
     velocity_0 = 0.0
 
     X = np.array([
-        [angular_position_0],
-        [angular_velocity_0],
-        [position_0],
-        [velocity_0]
+        angular_position_0,
+        angular_velocity_0,
+        position_0,
+        velocity_0
     ])
 
     dt = 0.01
     states= [X]
     ts = np.arange(0, 1e4) * dt
-    u = np.array([[0]])
+    u = np.array([0])
     for i, _ in enumerate(ts):
         if i%10==0:
             print(i)
         X = step(X, u, mass_pendulum, mass_cart, length, gravity, angular_friction, dt)
-        states.append(states)
+        states.append(X)
+    
+    return states
