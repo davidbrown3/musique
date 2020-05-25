@@ -11,12 +11,19 @@ angular_velocity_0 = 0.0
 position_0 = 0.0
 velocity_0 = 0.0
 
-states = torch.Tensor([
-    [angular_position_0],
-    [angular_velocity_0],
-    [position_0],
-    [velocity_0]
-])
+states = torch.tensor([
+    angular_position_0,
+    angular_velocity_0,
+    position_0,
+    velocity_0
+], requires_grad=True)
+
+control = torch.tensor([
+    0.0
+], requires_grad=True)
+
+d = problem.derivatives(states, control)
+jac = problem.jacobian(states, control)
 
 dt = 0.01
 states_log = [states]
@@ -25,7 +32,7 @@ ts = np.arange(0, 1e4) * dt
 for i, t in enumerate(ts):
     if i%10==0:
         print(i)
-    states = problem.step(x=states, u=torch.Tensor([[0]]), dt=dt)
+    states = problem.step(x=states, u=control, dt=dt)
     states_log.append(states)
 
 fig = go.Figure()

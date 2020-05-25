@@ -21,20 +21,12 @@ class InvertedPendulum():
     def mass_total(self):
         return self.mass_pendulum + self.mass_cart
 
-    @staticmethod
-    def decode_states(x):
-        x = torch.squeeze(x)
-        return x[0], x[1], x[2], x[3]
-
-    @staticmethod
-    def decode_control(u):
-        u = torch.squeeze(u)
-        return u
-
     def derivatives(self, x, u):
 
-        angular_position, angular_velocity, _, velocity = self.decode_states(x)
-        force = self.decode_control(u)
+        angular_position = x[0]
+        angular_velocity = x[1]
+        velocity = x[3] 
+        force = u[0]
 
         angular_position_sin = torch.sin(angular_position)
         angular_position_cos = torch.cos(angular_position)
@@ -56,13 +48,18 @@ class InvertedPendulum():
             ) 
         ) / self.mass_total
         
-        return torch.Tensor([
-            [angular_velocity],
-            [angular_acceleration],
-            [velocity],
-            [acceleration]
-        ])    
+        derivatives = (
+            angular_velocity,
+            angular_acceleration,
+            velocity,
+            acceleration
+        )
+
+        return derivatives  
         
     def step(self, x, u, dt):
         dx_dt = self.derivatives(x, u)
         return x + dx_dt * dt
+
+    def jacobian(self, x, u):
+        return torch.autograd.functional.jacobian(self.derivatives, (x, u))
