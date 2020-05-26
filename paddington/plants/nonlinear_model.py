@@ -1,5 +1,7 @@
 import torch
 
+from paddington.tools.controls_tools import continuous_to_discrete
+
 
 class InvertedPendulum():
     '''
@@ -16,7 +18,7 @@ class InvertedPendulum():
         self.length = 1
         self.gravity = 9.81
         self.angular_friction = 0.1
-    
+
     @property
     def mass_total(self):
         return self.mass_pendulum + self.mass_cart
@@ -25,7 +27,7 @@ class InvertedPendulum():
 
         angular_position = x[2]
         angular_velocity = x[3]
-        velocity = x[1] 
+        velocity = x[1]
         force = u[0]
 
         angular_position_sin = torch.sin(angular_position)
@@ -41,18 +43,18 @@ class InvertedPendulum():
             )
         ) - angular_velocity * self.angular_friction
 
-        
+
         acceleration = (
             force + self.mass_pendulum * self.length * (
                 angular_velocity**2 * angular_position_sin - angular_acceleration * angular_position_cos
-            ) 
+            )
         ) / self.mass_total
-        
+
         derivatives = (
             velocity,
             acceleration,
             angular_velocity,
-            angular_acceleration 
+            angular_acceleration
         )
 
         return torch.stack(derivatives)
@@ -61,8 +63,12 @@ class InvertedPendulum():
         dx_dt = self.derivatives(x, u)
         return x + dx_dt * dt
 
-    def jacobian(self, x, u, dt):
+    def calculate_statespace(self, x, u):
         return torch.autograd.functional.jacobian(self.derivatives, (x,u))
-    
+
+    def calcualte_Ad(self, x, u):
+        return continuous_to_discrete(self.calculate_A)
+
+
     def hessian(self, x, u):
         return [torch.autograd.functional.hessian(lambda x, u: self.derivatives(x, u)[i], (x, u)) for i in range(len(x))]
