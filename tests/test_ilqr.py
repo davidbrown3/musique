@@ -29,13 +29,15 @@ class TestZeroLinearization(unittest.TestCase):
 
     def test_angular_position(self):
 
+        delta = torch.tensor([0.0, 0.0, 1e-3, 0.0])
+
         linear = torch.matmul(
             self.A,
-            torch.tensor([0.0, 0.0, 1e-3, 0.0]) + self.states_0
+            delta + self.states_0
         ) + self.derivatives
 
         nonlinear = self.problem.derivatives(
-            torch.tensor([0.0, 0.0, 1e-3, 0.0]),
+            delta,
             torch.tensor([0.0])
         )
 
@@ -43,13 +45,15 @@ class TestZeroLinearization(unittest.TestCase):
 
     def test_angular_velocity(self):
 
+        delta = torch.tensor([0.0, 0.0, 0.0, 1e-3])
+
         linear = torch.matmul(
             self.A,
-            torch.tensor([0.0, 0.0, 0.0, 1e-3]) + self.states_0
+            delta + self.states_0
         ) + self.derivatives
 
         nonlinear = self.problem.derivatives(
-            torch.tensor([0.0, 0.0, 0.0, 1e-3]),
+            delta,
             torch.tensor([0.0])
         )
 
@@ -57,13 +61,15 @@ class TestZeroLinearization(unittest.TestCase):
 
     def test_angular_combined(self):
 
+        delta = torch.tensor([0.0, 0.0, 1e-3, 1e-3])
+
         linear = torch.matmul(
             self.A,
-            torch.tensor([0.0, 0.0, 1e-3, 1e-3]) + self.states_0
+            delta + self.states_0
         )
 
         nonlinear = self.problem.derivatives(
-            torch.tensor([0.0, 0.0, 1e-3, 1e-3]),
+            delta,
             torch.tensor([0.0])
         )
 
@@ -94,15 +100,19 @@ class TestNonZeroLinearization(unittest.TestCase):
 
     def test_hessian(self):
 
-        A_nonlinear, B_nonlinear = self.problem.calculate_statespace(torch.tensor([0.0, 0.0, 0.0, 1e-3]) + self.states_0, self.control)
+        delta = torch.tensor([0.0, 0.0, 0.0, 1e-3])
 
-        A_linear = torch.zeros_like(A_nonlinear)
+        A_nonlinear, B_nonlinear = self.problem.calculate_statespace(
+            delta + self.states_0,
+            self.control
+        )
+
         rows = []
         for hess in self.hessian:
             rows.append(
                 torch.matmul(
                     hess[0][0],
-                    torch.tensor([0.0, 0.0, 0.0, 1e-3])
+                    delta
                 )
             )
 
@@ -111,13 +121,15 @@ class TestNonZeroLinearization(unittest.TestCase):
 
     def test_angular_position(self):
 
+        delta = torch.tensor([0.0, 0.0, 1e-3, 0.0])
+
         linear = torch.matmul(
             self.A,
-            torch.tensor([0.0, 0.0, 1e-3, 0.0])
+            delta
         ) + self.derivatives
 
         nonlinear = self.problem.derivatives(
-            torch.tensor([0.0, 0.0, 1e-3, 0.0]) + self.states_0,
+            delta + self.states_0,
             torch.tensor([0.0])
         )
 
@@ -125,13 +137,15 @@ class TestNonZeroLinearization(unittest.TestCase):
 
     def test_angular_velocity(self):
 
+        delta = torch.tensor([0.0, 0.0, 0.0, 1e-3])
+
         linear = torch.matmul(
             self.A,
-            torch.tensor([0.0, 0.0, 0.0, 1e-3])
+            delta
         ) + self.derivatives
 
         nonlinear = self.problem.derivatives(
-            torch.tensor([0.0, 0.0, 0.0, 1e-3]) + self.states_0,
+            delta + self.states_0,
             torch.tensor([0.0])
         )
 
@@ -139,13 +153,15 @@ class TestNonZeroLinearization(unittest.TestCase):
 
     def test_angular_combined(self):
 
+        delta = torch.tensor([0.0, 0.0, 1e-3, 1e-3])
+
         linear = torch.matmul(
             self.A,
-            torch.tensor([0.0, 0.0, 1e-3, 1e-3])
+            delta
         ) + self.derivatives
 
         nonlinear = self.problem.derivatives(
-            torch.tensor([0.0, 0.0, 1e-3, 1e-3]) + self.states_0,
+            delta + self.states_0,
             torch.tensor([0.0])
         )
 
