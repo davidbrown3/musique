@@ -1,18 +1,16 @@
 import unittest
 
-import numpy as np
-import plotly.graph_objects as go
 import torch
 
 from paddington.plants.nonlinear_model import InvertedPendulum
 
 
 class TestZeroLinearization(unittest.TestCase):
-    
+
     def setUp(self):
 
         self.problem = InvertedPendulum()
-        
+
         states = torch.tensor([
             0.0,
             0.0,
@@ -24,9 +22,6 @@ class TestZeroLinearization(unittest.TestCase):
             0.0
         ], requires_grad=True)
 
-        
-        d = self.problem.derivatives(states, control)
-
         # Linearisation
         dt = 0.01
         self.jac = self.problem.jacobian(states, control, dt)
@@ -34,12 +29,54 @@ class TestZeroLinearization(unittest.TestCase):
     def test_angle(self):
 
         linear = torch.matmul(
-            self.jac[0], 
+            self.jac[0],
             torch.tensor([0.0, 0.0, 1e-3, 0.0])
         )
 
         nonlinear = self.problem.derivatives(
-            torch.tensor([0.0, 0.0, 1e-3, 0.0]), 
+            torch.tensor([0.0, 0.0, 1e-3, 0.0]),
+            torch.tensor([0.0])
+        )
+
+        [self.assertAlmostEqual(l, n) for l, n in zip(linear.tolist(), nonlinear.tolist())]
+
+    def test_angular_position(self):
+
+        linear = torch.matmul(
+            self.jac[0],
+            torch.tensor([0.0, 0.0, 1e-3, 0.0])
+        )
+
+        nonlinear = self.problem.derivatives(
+            torch.tensor([0.0, 0.0, 1e-3, 0.0]),
+            torch.tensor([0.0])
+        )
+
+        [self.assertAlmostEqual(l, n) for l, n in zip(linear.tolist(), nonlinear.tolist())]
+
+    def test_angular_velocity(self):
+
+        linear = torch.matmul(
+            self.jac[0],
+            torch.tensor([0.0, 0.0, 0.0, 1e-3])
+        )
+
+        nonlinear = self.problem.derivatives(
+            torch.tensor([0.0, 0.0, 0.0, 1e-3]),
+            torch.tensor([0.0])
+        )
+
+        [self.assertAlmostEqual(l, n) for l, n in zip(linear.tolist(), nonlinear.tolist())]
+
+    def test_angular_combined(self):
+
+        linear = torch.matmul(
+            self.jac[0],
+            torch.tensor([0.0, 0.0, 1e-3, 1e-3])
+        )
+
+        nonlinear = self.problem.derivatives(
+            torch.tensor([0.0, 0.0, 1e-3, 1e-3]),
             torch.tensor([0.0])
         )
 
