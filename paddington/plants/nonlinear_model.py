@@ -8,7 +8,7 @@ class InvertedPendulum():
     '''
 
     # u = force
-    # States = angular_position, angular_velocity, position, velocity
+    # States = position, velocity, angular_position, angular_velocity
 
     def __init__(self):
         self.mass_pendulum = 5
@@ -23,9 +23,9 @@ class InvertedPendulum():
 
     def derivatives(self, x, u):
 
-        angular_position = x[0]
-        angular_velocity = x[1]
-        velocity = x[3] 
+        angular_position = x[2]
+        angular_velocity = x[3]
+        velocity = x[1] 
         force = u[0]
 
         angular_position_sin = torch.sin(angular_position)
@@ -49,17 +49,20 @@ class InvertedPendulum():
         ) / self.mass_total
         
         derivatives = (
-            angular_velocity,
-            angular_acceleration,
             velocity,
-            acceleration
+            acceleration,
+            angular_velocity,
+            angular_acceleration 
         )
 
-        return derivatives  
-        
+        return torch.stack(derivatives)
+
     def step(self, x, u, dt):
         dx_dt = self.derivatives(x, u)
         return x + dx_dt * dt
 
-    def jacobian(self, x, u):
-        return torch.autograd.functional.jacobian(self.derivatives, (x, u))
+    def jacobian(self, x, u, dt):
+        return torch.autograd.functional.jacobian(lambda x, u: (self.step(x, u, dt) - x) / dt, (x, u))
+    
+    def hessian(self, x, u):
+        return [torch.autograd.functional.hessian(lambda x, u: self.derivatives(x, u)[i], (x, u)) for i in range(len(x))]

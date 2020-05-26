@@ -6,26 +6,49 @@ from paddington.plants.nonlinear_model import InvertedPendulum
 
 problem = InvertedPendulum()
 
-angular_position_0 = np.deg2rad(150)
+angular_position_0 = np.deg2rad(0)
 angular_velocity_0 = 0.0
 position_0 = 0.0
 velocity_0 = 0.0
 
 states = torch.tensor([
-    angular_position_0,
-    angular_velocity_0,
     position_0,
-    velocity_0
+    velocity_0,
+    angular_position_0,
+    angular_velocity_0
 ], requires_grad=True)
 
 control = torch.tensor([
     0.0
 ], requires_grad=True)
 
-d = problem.derivatives(states, control)
-jac = problem.jacobian(states, control)
-
 dt = 0.01
+d = problem.derivatives(states, control)
+
+# Linearisation
+jac = problem.jacobian(states, control, dt)
+
+
+test = torch.matmul(jac[0], torch.tensor([
+        [0.0],
+        [0.0],
+        [1e-3],
+        [0.0]
+    ], dtype=torch.float64)
+)
+
+test2 = problem.derivatives(torch.tensor([
+        [0.0],
+        [0.0],
+        [1e-3],
+        [0.0]
+    ], dtype=torch.float64), control)
+
+
+hess = problem.hessian(states, control)
+
+
+
 states_log = [states]
 ts = np.arange(0, 1e4) * dt
 
