@@ -62,7 +62,7 @@ class InvertedPendulum():
         return x + dx_dt * dt
 
     def jacobian(self, x, u, dt):
-        return torch.autograd.functional.jacobian(lambda x, u: (self.step(x, u, dt) - x) / dt, (x, u))
+        return torch.autograd.functional.jacobian(self.derivatives, (x,u))
     
     def hessian(self, x, u):
         return [torch.autograd.functional.hessian(lambda x, u: self.derivatives(x, u)[i], (x, u)) for i in range(len(x))]

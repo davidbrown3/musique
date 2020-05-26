@@ -28,23 +28,6 @@ d = problem.derivatives(states, control)
 # Linearisation
 jac = problem.jacobian(states, control, dt)
 
-
-test = torch.matmul(jac[0], torch.tensor([
-        [0.0],
-        [0.0],
-        [1e-3],
-        [0.0]
-    ], dtype=torch.float64)
-)
-
-test2 = problem.derivatives(torch.tensor([
-        [0.0],
-        [0.0],
-        [1e-3],
-        [0.0]
-    ], dtype=torch.float64), control)
-
-
 hess = problem.hessian(states, control)
 
 
