@@ -69,16 +69,23 @@ class TestPendulum(unittest.TestCase):
 
         A_nonlinear, B_nonlinear = self.problem.calculate_statespace(states_delta + states_0, controls_delta + controls_0)
         dA_nonlinear = A_nonlinear - A
+        dB_nonlinear = B_nonlinear - B
 
-        rows = []
+        A_rows = []
+        B_rows = []
         for hess in hessian:
-            rows.append(
+            A_rows.append(
                 torch.matmul(hess[0][0], states_delta) + torch.matmul(hess[0][1], controls_delta)
             )
+            B_rows.append(
+                torch.matmul(hess[1][0], states_delta) + torch.matmul(hess[1][1], controls_delta)
+            )
 
-        dA_linear = torch.stack(rows)
+        dA_linear = torch.stack(A_rows)
+        dB_linear = torch.stack(B_rows)
 
         self.assertTrue(torch.allclose(dA_linear, dA_nonlinear, atol=5e-5))
+        self.assertTrue(torch.allclose(dB_linear, dB_nonlinear, atol=5e-5))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
