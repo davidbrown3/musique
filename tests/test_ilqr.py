@@ -13,7 +13,8 @@ states_0s = [
 ]
 
 controls_0s = [
-    torch.tensor([0.0], requires_grad=True)
+    torch.tensor([0.0], requires_grad=True),
+    torch.tensor([1.0], requires_grad=True)
 ]
 
 states_deltas = [
@@ -26,6 +27,7 @@ states_deltas = [
 controls_deltas = [
     torch.tensor([0.0]),
     torch.tensor([1e-3]),
+    torch.tensor([1.0]),
 ]
 
 Case = namedtuple('Case', 'states_0 controls_0 states_delta controls_delta')
@@ -61,7 +63,7 @@ class TestPendulum(unittest.TestCase):
 
         linear = torch.matmul(A, states_delta) + torch.matmul(B, controls_delta) + derivatives_0
         nonlinear = self.problem.derivatives(states_delta + states_0, controls_delta + controls_0)
-        [self.assertAlmostEqual(l, n, places=5) for l, n in zip(linear.tolist(), nonlinear.tolist())]
+        [self.assertAlmostEqual(l, n, places=4) for l, n in zip(linear.tolist(), nonlinear.tolist())]
 
     def compare_hessian(self, A, B, states_0, controls_0, states_delta, controls_delta, hessian):
 
@@ -71,7 +73,7 @@ class TestPendulum(unittest.TestCase):
         rows = []
         for hess in hessian:
             rows.append(
-                torch.matmul(hess[0][0], states_delta)
+                torch.matmul(hess[0][0], states_delta) + torch.matmul(hess[0][1], controls_delta)
             )
 
         dA_linear = torch.stack(rows)
