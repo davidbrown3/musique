@@ -35,7 +35,7 @@ class TestPendulum(unittest.TestCase):
     ]
 
     Case = namedtuple('Case', 'states_0 controls_0 states_delta controls_delta')
-    # Linearisation
+
     cases = []
     for states_0 in states_0s:
         for controls_0 in controls_0s:
