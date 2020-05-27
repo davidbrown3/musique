@@ -1,122 +1,82 @@
 import math
 import unittest
+from collections import namedtuple
 
 import torch
+from genty import genty, genty_dataset, genty_repeat
 
 from paddington.plants.nonlinear_model import InvertedPendulum
 
+states_0s = [
+    torch.tensor([0.0, 0.0, 0.0, 0.0], requires_grad=True),
+    torch.tensor([0.0, 0.0, math.pi/4, 0.0], requires_grad=True)
+]
 
-class StandardTests():
+controls_0s = [
+    torch.tensor([0.0], requires_grad=True)
+]
 
-    def compare_jacobian(self, delta):
+states_deltas = [
+    torch.tensor([0.0, 0.0, 0.0, 0.0]),
+    torch.tensor([0.0, 0.0, 1e-3, 0.0]),
+    torch.tensor([0.0, 0.0, 0.0, 1e-3]),
+    torch.tensor([0.0, 0.0, 1e-3, 1e-3]),
+]
 
-        linear = torch.matmul(
-            self.A,
-            delta
-        ) + self.derivatives
+controls_deltas = [
+    torch.tensor([0.0]),
+    torch.tensor([1e-3]),
+]
 
-        nonlinear = self.problem.derivatives(
-            delta + self.states_0,
-            torch.tensor([0.0])
-        )
+Case = namedtuple('Case', 'states_0 controls_0 states_delta controls_delta')
+# Linearisation
+cases = []
+for states_0 in states_0s:
+    for controls_0 in controls_0s:
+        for states_delta in states_deltas:
+            for controls_delta in controls_deltas:
+                cases.append(Case(states_0, controls_0, states_delta, controls_delta))
 
+@genty
+class TestPendulum(unittest.TestCase):
+
+    def setUp(self):
+        self.problem = InvertedPendulum()
+
+    @genty_dataset(
+        *cases
+    )
+    def test_gradients(self, states_0, controls_0, states_delta, controls_delta):
+
+        # Process
+        derivatives_0 = self.problem.derivatives(states_0, controls_0)
+        A, B = self.problem.calculate_statespace(states_0, controls_0)
+        hessian = self.problem.hessian(states_0, controls_0)
+
+        # Tests
+        self.compare_jacobian(A, B, states_0, controls_0, states_delta, controls_delta, derivatives_0)
+        self.compare_hessian(A, B, states_0, controls_0, states_delta, controls_delta, hessian)
+
+    def compare_jacobian(self, A, B, states_0, controls_0, states_delta, controls_delta, derivatives_0):
+
+        linear = torch.matmul(A, states_delta) + torch.matmul(B, controls_delta) + derivatives_0
+        nonlinear = self.problem.derivatives(states_delta + states_0, controls_delta + controls_0)
         [self.assertAlmostEqual(l, n, places=5) for l, n in zip(linear.tolist(), nonlinear.tolist())]
 
-    def compare_hessian(self, delta):
+    def compare_hessian(self, A, B, states_0, controls_0, states_delta, controls_delta, hessian):
 
-        A_nonlinear, B_nonlinear = self.problem.calculate_statespace(
-            delta + self.states_0,
-            self.control
-        )
-
-        dA_nonlinear = A_nonlinear - self.A
+        A_nonlinear, B_nonlinear = self.problem.calculate_statespace(states_delta + states_0, controls_delta + controls_0)
+        dA_nonlinear = A_nonlinear - A
 
         rows = []
-        for hess in self.hessian:
+        for hess in hessian:
             rows.append(
-                torch.matmul(
-                    hess[0][0],
-                    delta
-                )
+                torch.matmul(hess[0][0], states_delta)
             )
 
         dA_linear = torch.stack(rows)
 
         self.assertTrue(torch.allclose(dA_linear, dA_nonlinear, atol=5e-5))
-
-    def test_hessian_angular_position(self):
-
-        delta = torch.tensor([0.0, 0.0, 0.0, 1e-3])
-        self.compare_hessian(delta)
-
-    def test_hessian_angular_velocity(self):
-
-        delta = torch.tensor([0.0, 0.0, 1e-3, 0.0])
-        self.compare_hessian(delta)
-
-    def test_hessian_angular_combined(self):
-
-        delta = torch.tensor([0.0, 0.0, 1e-3, 1e-3])
-        self.compare_hessian(delta)
-
-    def test_jacobian_angular_position(self):
-
-        delta = torch.tensor([0.0, 0.0, 1e-3, 0.0])
-        self.compare_jacobian(delta)
-
-    def test_jacobian_angular_velocity(self):
-
-        delta = torch.tensor([0.0, 0.0, 0.0, 1e-3])
-        self.compare_jacobian(delta)
-
-    def test_jacobian_angular_combined(self):
-
-        delta = torch.tensor([0.0, 0.0, 1e-3, 1e-3])
-        self.compare_jacobian(delta)
-
-class TestZeroLinearization(unittest.TestCase, StandardTests):
-
-    def setUp(self):
-
-        self.problem = InvertedPendulum()
-
-        self.states_0 = torch.tensor([
-            0.0,
-            0.0,
-            0.0,
-            0.0
-        ], requires_grad=True)
-
-        self.control = torch.tensor([
-            0.0
-        ], requires_grad=True)
-
-        # Linearisation
-        self.derivatives = self.problem.derivatives(self.states_0, self.control)
-        self.A, self.B = self.problem.calculate_statespace(self.states_0, self.control)
-        self.hessian = self.problem.hessian(self.states_0, self.control)
-
-class TestNonZeroLinearization(unittest.TestCase, StandardTests):
-
-    def setUp(self):
-
-        self.problem = InvertedPendulum()
-
-        self.states_0 = torch.tensor([
-            0.0,
-            0.0,
-            math.pi/4,
-            0.0
-        ], requires_grad=True)
-
-        self.control = torch.tensor([
-            0.0
-        ], requires_grad=True)
-
-        # Linearisation
-        self.derivatives = self.problem.derivatives(self.states_0, self.control)
-        self.A, self.B = self.problem.calculate_statespace(self.states_0, self.control)
-        self.hessian = self.problem.hessian(self.states_0, self.control)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
