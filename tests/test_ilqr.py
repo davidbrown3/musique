@@ -7,40 +7,41 @@ from genty import genty, genty_dataset, genty_repeat
 
 from paddington.plants.nonlinear_model import InvertedPendulum
 
-states_0s = [
-    torch.tensor([0.0, 0.0, 0.0, 0.0], requires_grad=True),
-    torch.tensor([0.0, 0.0, math.pi/4, 0.0], requires_grad=True)
-]
-
-controls_0s = [
-    torch.tensor([0.0], requires_grad=True),
-    torch.tensor([1.0], requires_grad=True)
-]
-
-states_deltas = [
-    torch.tensor([0.0, 0.0, 0.0, 0.0]),
-    torch.tensor([0.0, 0.0, 1e-3, 0.0]),
-    torch.tensor([0.0, 0.0, 0.0, 1e-3]),
-    torch.tensor([0.0, 0.0, 1e-3, 1e-3]),
-]
-
-controls_deltas = [
-    torch.tensor([0.0]),
-    torch.tensor([1e-3]),
-    torch.tensor([1.0]),
-]
-
-Case = namedtuple('Case', 'states_0 controls_0 states_delta controls_delta')
-# Linearisation
-cases = []
-for states_0 in states_0s:
-    for controls_0 in controls_0s:
-        for states_delta in states_deltas:
-            for controls_delta in controls_deltas:
-                cases.append(Case(states_0, controls_0, states_delta, controls_delta))
 
 @genty
 class TestPendulum(unittest.TestCase):
+
+    states_0s = [
+        torch.tensor([0.0, 0.0, 0.0, 0.0], requires_grad=True),
+        torch.tensor([0.0, 0.0, math.pi/4, 0.0], requires_grad=True)
+    ]
+
+    controls_0s = [
+        torch.tensor([0.0], requires_grad=True),
+        torch.tensor([1.0], requires_grad=True)
+    ]
+
+    states_deltas = [
+        torch.tensor([0.0, 0.0, 0.0, 0.0]),
+        torch.tensor([0.0, 0.0, 1e-3, 0.0]),
+        torch.tensor([0.0, 0.0, 0.0, 1e-3]),
+        torch.tensor([0.0, 0.0, 1e-3, 1e-3]),
+    ]
+
+    controls_deltas = [
+        torch.tensor([0.0]),
+        torch.tensor([1e-3]),
+        torch.tensor([1.0]),
+    ]
+
+    Case = namedtuple('Case', 'states_0 controls_0 states_delta controls_delta')
+    # Linearisation
+    cases = []
+    for states_0 in states_0s:
+        for controls_0 in controls_0s:
+            for states_delta in states_deltas:
+                for controls_delta in controls_deltas:
+                    cases.append(Case(states_0, controls_0, states_delta, controls_delta))
 
     def setUp(self):
         self.problem = InvertedPendulum()
