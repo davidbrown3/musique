@@ -27,7 +27,7 @@ class TestZeroLinearization(unittest.TestCase):
         self.derivatives = self.problem.derivatives(self.states_0, self.control)
         self.A, self.B = self.problem.calculate_statespace(self.states_0, self.control)
 
-    def test_angular_position(self):
+    def test_jacobian_angular_position(self):
 
         delta = torch.tensor([0.0, 0.0, 1e-3, 0.0])
 
@@ -43,7 +43,7 @@ class TestZeroLinearization(unittest.TestCase):
 
         [self.assertAlmostEqual(l, n, places=5) for l, n in zip(linear.tolist(), nonlinear.tolist())]
 
-    def test_angular_velocity(self):
+    def test_jacobian_angular_velocity(self):
 
         delta = torch.tensor([0.0, 0.0, 0.0, 1e-3])
 
@@ -59,7 +59,7 @@ class TestZeroLinearization(unittest.TestCase):
 
         [self.assertAlmostEqual(l, n, places=5) for l, n in zip(linear.tolist(), nonlinear.tolist())]
 
-    def test_angular_combined(self):
+    def test_jacobian_angular_combined(self):
 
         delta = torch.tensor([0.0, 0.0, 1e-3, 1e-3])
 
@@ -98,7 +98,7 @@ class TestNonZeroLinearization(unittest.TestCase):
         self.A, self.B = self.problem.calculate_statespace(self.states_0, self.control)
         self.hessian = self.problem.hessian(self.states_0, self.control)
 
-    def test_hessian(self):
+    def test_hessian_angular_position(self):
 
         delta = torch.tensor([0.0, 0.0, 0.0, 1e-3])
 
@@ -106,6 +106,8 @@ class TestNonZeroLinearization(unittest.TestCase):
             delta + self.states_0,
             self.control
         )
+
+        dA_nonlinear = A_nonlinear - self.A
 
         rows = []
         for hess in self.hessian:
@@ -116,10 +118,59 @@ class TestNonZeroLinearization(unittest.TestCase):
                 )
             )
 
-        A_linear = torch.stack(rows)
-        A_nonlinear - self.A
+        dA_linear = torch.stack(rows)
 
-    def test_angular_position(self):
+        self.assertTrue(torch.allclose(dA_linear, dA_nonlinear, atol=1e-6))
+
+    def test_hessian_angular_velocity(self):
+
+        delta = torch.tensor([0.0, 0.0, 1e-3, 0.0])
+
+        A_nonlinear, B_nonlinear = self.problem.calculate_statespace(
+            delta + self.states_0,
+            self.control
+        )
+
+        dA_nonlinear = A_nonlinear - self.A
+
+        rows = []
+        for hess in self.hessian:
+            rows.append(
+                torch.matmul(
+                    hess[0][0],
+                    delta
+                )
+            )
+
+        dA_linear = torch.stack(rows)
+
+        self.assertTrue(torch.allclose(dA_linear, dA_nonlinear, atol=1e-6))
+
+    def test_hessian_angular_combined(self):
+
+        delta = torch.tensor([0.0, 0.0, 1e-3, 1e-3])
+
+        A_nonlinear, B_nonlinear = self.problem.calculate_statespace(
+            delta + self.states_0,
+            self.control
+        )
+
+        dA_nonlinear = A_nonlinear - self.A
+
+        rows = []
+        for hess in self.hessian:
+            rows.append(
+                torch.matmul(
+                    hess[0][0],
+                    delta
+                )
+            )
+
+        dA_linear = torch.stack(rows)
+
+        self.assertTrue(torch.allclose(dA_linear, dA_nonlinear, atol=1e-6))
+
+    def test_jacobian_angular_position(self):
 
         delta = torch.tensor([0.0, 0.0, 1e-3, 0.0])
 
@@ -135,7 +186,7 @@ class TestNonZeroLinearization(unittest.TestCase):
 
         [self.assertAlmostEqual(l, n, places=5) for l, n in zip(linear.tolist(), nonlinear.tolist())]
 
-    def test_angular_velocity(self):
+    def test_jacobian_angular_velocity(self):
 
         delta = torch.tensor([0.0, 0.0, 0.0, 1e-3])
 
@@ -151,7 +202,7 @@ class TestNonZeroLinearization(unittest.TestCase):
 
         [self.assertAlmostEqual(l, n, places=5) for l, n in zip(linear.tolist(), nonlinear.tolist())]
 
-    def test_angular_combined(self):
+    def test_jacobian_angular_combined(self):
 
         delta = torch.tensor([0.0, 0.0, 1e-3, 1e-3])
 
