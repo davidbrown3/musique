@@ -5,6 +5,9 @@ from paddington.tools.controls_tools import continuous_to_discrete
 
 class NonLinearModel():
 
+    def derivatives(self, x, u):
+        return torch.tensor([])
+
     def step(self, x, u, dt):
         dx_dt = self.derivatives(x, u)
         return x + dx_dt * dt

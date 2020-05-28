@@ -1,6 +1,9 @@
-import numpy as np
-from scipy import linalg
+import torch
+
+from paddington.solvers.lqr import LQR
 
 
 class iLQR:
-    pass
+
+    def __init__(self, plant, cost_function):
+        pass

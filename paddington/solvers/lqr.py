@@ -1,22 +1,13 @@
 import numpy as np
-from scipy import linalg
 
 
 class LQR:
 
-    def __init__(self, A, B, Cx, Cu, cx, cu):
-
-        shape = np.shape(B)
-        self.N_x = shape[0]
-        self.N_u = shape[1]
-
-        # Changing syntax of linear dynamics
-        F = np.concatenate((A, B), axis=1)
-        f = np.zeros([self.N_x, 1])
-        C = linalg.block_diag(Cx, Cu)
-        c = np.concatenate((cx, cu), axis=0)
+    def __init__(self, F, f, C, c, N_x, N_u):
 
         # LTI
+        self.N_x = N_x
+        self.N_u = N_u
         self.F_Tx = F
         self.f_Tx = f
         self.C_Tx = C

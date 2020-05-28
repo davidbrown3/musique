@@ -1,16 +1,13 @@
 
-import importlib
 import json
-import os
-import unittest
 from importlib.resources import open_text
 
-import control
 import numpy as np
 import plotly.graph_objects as go
 
 from paddington.plants.linear_model import LinearModel
 from paddington.solvers.lqr import LQR
+from paddington.tools.controls_tools import convert_syntax
 
 with open_text("paddington.examples.models.linear", "aircraft_pitch.json") as f:
     data = json.load(f)
@@ -21,8 +18,10 @@ Cu = np.array([[1]])
 cx = np.zeros([3, 1])
 cu = np.zeros([1, 1])
 
+F, f, C, c, N_x, N_u = convert_syntax(plant.A_d, plant.B_d, Cx, Cu, cx, cu)
+
 # Discrete horizon
-solver = LQR(A=plant.A_d, B=plant.B_d, Cx=Cx, Cu=Cu, cx=cx, cu=cu)
+solver = LQR(F=F, f=f, C=C, c=c, N_x=N_x, N_u=N_u)
 
 Ks = []
 ks = []

@@ -8,6 +8,7 @@ import numpy as np
 
 from paddington.plants.linear_model import LinearModel
 from paddington.solvers.lqr import LQR
+from paddington.tools.controls_tools import convert_syntax
 
 
 class TestAircraftPitch(unittest.TestCase):
@@ -25,15 +26,14 @@ class TestAircraftPitch(unittest.TestCase):
     def test_infinite_horizon(self):
 
         Cx = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 2], ])
-
         Cu = np.array([[1]])
-
         cx = np.zeros([3, 1])
         cu = np.zeros([1, 1])
 
+        F, f, C, c, N_x, N_u = convert_syntax(self.plant.A_d, self.plant.B_d, Cx, Cu, cx, cu)
+
         # Discrete horizon
-        solver = LQR(A=self.plant.A_d, B=self.plant.B_d,
-                     Cx=Cx, Cu=Cu, cx=cx, cu=cu)
+        solver = LQR(F=F, f=f, C=C, c=c, N_x=N_x, N_u=N_u)
 
         V_Tx, v_Tx, _, _ = solver.backward_pass(solver.V_Ty_i, solver.v_Ty_i)
 
