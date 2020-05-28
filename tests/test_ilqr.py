@@ -5,7 +5,8 @@ from collections import namedtuple
 import torch
 from genty import genty, genty_dataset, genty_repeat
 
-from paddington.plants.nonlinear_model import InvertedPendulum
+from paddington.examples.models.nonlinear.inverted_pendulum import \
+    InvertedPendulum
 
 
 @genty

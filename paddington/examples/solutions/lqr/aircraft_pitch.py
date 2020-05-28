@@ -3,6 +3,7 @@ import importlib
 import json
 import os
 import unittest
+from importlib.resources import open_text
 
 import control
 import numpy as np
@@ -11,7 +12,7 @@ import plotly.graph_objects as go
 from paddington.plants.linear_model import LinearModel
 from paddington.solvers.lqr import LQR
 
-with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), 'models', 'linear', 'aircraft_pitch.json')) as f:
+with open_text("paddington.examples.models.linear", "aircraft_pitch.json") as f:
     data = json.load(f)
     plant = LinearModel.from_dict(data)
 
