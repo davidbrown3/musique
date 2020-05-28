@@ -1,9 +1,9 @@
-import importlib
 import json
 import unittest
 from importlib.resources import open_text
 
 import control
+import numpy as np
 import torch
 
 from paddington.plants.linear_model import LinearModel
@@ -25,7 +25,7 @@ class TestAircraftPitch(unittest.TestCase):
 
     def test_infinite_horizon(self):
 
-        Cx_diag = torch.tensor([0.1, 0.0, 2.0, 0.0])
+        Cx_diag = torch.tensor([0.0, 0.0, 2.0])
         Cu_diag = torch.tensor([1.0])
         cx = torch.zeros([3, 1])
         cu = torch.zeros([1, 1])
@@ -42,7 +42,7 @@ class TestAircraftPitch(unittest.TestCase):
         K_discrete = torch.squeeze(K_discrete)
 
         # Infinite horizon
-        K_infinite, _, _ = control.lqr(self.plant.A, self.plant.B, Cx, Cu)
+        K_infinite, _, _ = control.lqr(self.plant.A, self.plant.B, Cx_diag.numpy() * np.eye(len(Cx_diag)), Cu_diag.numpy()* np.eye(len(Cu_diag)))
         # Minus sign for convention
         K_infinite = -torch.squeeze(torch.tensor(K_infinite))
 
