@@ -5,7 +5,6 @@ from importlib.resources import open_text
 
 import control
 import numpy as np
-import plotly.graph_objects as go
 
 from paddington.plants.linear_model import LinearModel
 from paddington.solvers.lqr import LQR
@@ -19,7 +18,7 @@ class TestAircraftPitch(unittest.TestCase):
 
     def setUp(self):
 
-        with open_text("paddington.example_models.linear", "aircraft_pitch.json") as f:
+        with open_text("paddington.examples.models.linear", "aircraft_pitch.json") as f:
             data = json.load(f)
             self.plant = LinearModel.from_dict(data)
 
@@ -56,38 +55,7 @@ class TestAircraftPitch(unittest.TestCase):
         self.assertLessEqual(K_discrete[2] / K_infinite[2], 1.07)
 
 
-# # %%
-# Ks = []
-# ks = []
-# for t in np.arange(40, 0, -dt):
-#     V_Tx, v_Tx, K_Tx, k_Tx = solver.backward_pass(V_Tx, v_Tx)
-#     print(K_Tx)
-#     Ks.append(K_Tx)
-#     ks.append(k_Tx)
 
-# xs = []
-# ts = np.arange(0, 40, dt)
-# x = np.array([
-#     [0],
-#     [0],
-#     [-1]
-# ])
-# xs.append(x)
-# for t, K, k in zip(ts, Ks[::-1], ks[::-1]):
-#     x = solver.step(x, K, k)
-#     xs.append(x)
-
-# # %%
-# fig = go.Figure()
-
-# fig.add_trace(
-#     go.Scatter(
-#         x=ts,
-#         y=[x[2, 0] for x in xs]
-#     )
-# )
-
-# fig.show()
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

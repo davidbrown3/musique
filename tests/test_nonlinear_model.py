@@ -23,14 +23,6 @@ control = torch.tensor([
 ], requires_grad=True)
 
 dt = 0.01
-d = problem.derivatives(states, control)
-
-# Linearisation
-jac = problem.jacobian(states, control, dt)
-
-hess = problem.hessian(states, control)
-
-
 
 states_log = [states]
 ts = np.arange(0, 1e4) * dt

@@ -7,7 +7,7 @@ from paddington.plants.linear_model import LinearModel
 
 class TestModelLoad(unittest.TestCase):
     def setUp(self):
-        with open_text("paddington.example_models.linear", "aircraft_pitch.json") as f:
+        with open_text("paddington.examples.models.linear", "aircraft_pitch.json") as f:
             self.data = json.load(f)
 
     def test_map_object(self):
