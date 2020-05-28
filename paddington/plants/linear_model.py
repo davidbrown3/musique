@@ -1,10 +1,8 @@
-import json
-import os
 import typing
 from dataclasses import dataclass
 
 import control
-import numpy as np
+import torch
 from dataclasses_json import dataclass_json
 
 
@@ -19,16 +17,16 @@ class LinearModel:
     dt: float
 
     def __post_init__(self):
-        self.A = np.array(self.A)
-        self.B = np.array(self.B)
-        self.C = np.array(self.C)
-        self.D = np.array(self.D)
+        self.A = torch.tensor(self.A)
+        self.B = torch.tensor(self.B)
+        self.C = torch.tensor(self.C)
+        self.D = torch.tensor(self.D)
         self.sys = control.ss(self.A, self.B, self.C, self.D)
         self.discretize(dt=self.dt)
 
     def discretize(self, dt):
         self.sys_discrete = control.sample_system(self.sys, dt)
-        self.A_d = np.array(self.sys_discrete.A)
-        self.B_d = np.array(self.sys_discrete.B)
-        self.C_d = np.array(self.sys_discrete.C)
-        self.D_d = np.array(self.sys_discrete.D)
+        self.A_d = torch.tensor(self.sys_discrete.A)
+        self.B_d = torch.tensor(self.sys_discrete.B)
+        self.C_d = torch.tensor(self.sys_discrete.C)
+        self.D_d = torch.tensor(self.sys_discrete.D)

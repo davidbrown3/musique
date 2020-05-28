@@ -34,13 +34,14 @@ class quadratic_cost_function(cost_function):
         return self.C
 
 
-def convert_syntax(A, B, Cx, Cu, cx, cu):
+def convert_syntax(A, B, Cx_diag, Cu_diag, cx, cu):
 
     # Changing syntax of linear dynamics
-    F = np.concatenate((A, B), axis=1)
-    f = np.zeros([len(F), 1])
-    C = linalg.block_diag(Cx, Cu)
-    c = np.concatenate((cx, cu), axis=0)
+    F = torch.cat((A, B), dim=1).float() # TODO: Remove this
+    f = torch.zeros([len(F), 1])
+    C_stacked = torch.cat((Cx_diag, Cu_diag), dim=0)
+    C = torch.eye(len(C_stacked)) * C_stacked
+    c = torch.cat((cx, cu), dim=0)
 
     shape = B.shape
     N_x = shape[0]
