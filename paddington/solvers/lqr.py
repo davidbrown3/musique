@@ -3,7 +3,7 @@ import torch
 
 class LQR:
 
-    def __init__(self, F, f, C, c, N_x, N_u):
+    def __init__(self, F, f, C, c, dt, N_x, N_u):
 
         # LTI
         self.N_x = N_x
@@ -12,47 +12,37 @@ class LQR:
         self.f = f
         self.C = C
         self.c = c
+        self.dt = dt
 
         # Initialisation
-        self.V_Ty_i = torch.zeros([self.N_x, self.N_x])
-        self.v_Ty_i = torch.zeros([self.N_x, 1])
+        self.V_i, self.v_i, _, _ = self._backward_pass(
+            V_Ty=torch.zeros([self.N_x, self.N_x]),
+            v_Ty=torch.zeros([self.N_x, 1])
+        )
 
-    def step(self, x, K, k, F_Tx=None):
-
-        if F_Tx is None:
-            F_Tx = self.F
+    @staticmethod
+    def step(x, K, k, F, f):
 
         u = torch.matmul(K, x) + k
         X = torch.cat((x, u))
-        x_new = torch.matmul(F_Tx, X)
+        x_new = torch.matmul(F, X) + f
 
-        return x_new
+        return x_new, u
 
-    def backward_pass(self, V_Ty, v_Ty, F_Tx=None, f_Tx=None, C_Tx=None, c_Tx=None):
-
-        if F_Tx is None:
-            F_Tx = self.F
-
-        if f_Tx is None:
-            f_Tx = self.f
-
-        if C_Tx is None:
-            C_Tx = self.C
-
-        if c_Tx is None:
-            c_Tx = self.c
+    @staticmethod
+    def backward_pass(V_Ty, v_Ty, F_Tx, f_Tx, C_Tx, c_Tx, N_x, N_u):
 
         # Q Value constants
         Q_Tx = C_Tx + torch.matmul(F_Tx.T, torch.matmul(V_Ty, F_Tx))
         q_Tx = c_Tx + torch.matmul(F_Tx.T, torch.matmul(V_Ty, f_Tx)) + torch.matmul(F_Tx.T, v_Ty)
 
         # Q Value constant slices
-        Q_xx_Tx = Q_Tx[0:self.N_x, 0:self.N_x]
-        Q_uu_Tx = Q_Tx[self.N_x:(self.N_x+self.N_u), self.N_x:(self.N_x+self.N_u)]
-        Q_ux_Tx = Q_Tx[self.N_x:(self.N_x+self.N_u), 0:self.N_x]
-        Q_xu_Tx = Q_Tx[0:self.N_x, self.N_x:(self.N_x+self.N_u)]
-        q_x_Tx = q_Tx[0:self.N_x, 0]
-        q_u_Tx = q_Tx[self.N_x:(self.N_x+self.N_u), 0]
+        Q_xx_Tx = Q_Tx[0:N_x, 0:N_x]
+        Q_uu_Tx = Q_Tx[N_x:(N_x+N_u), N_x:(N_x+N_u)]
+        Q_ux_Tx = Q_Tx[N_x:(N_x+N_u), 0:N_x]
+        Q_xu_Tx = Q_Tx[0:N_x, N_x:(N_x+N_u)]
+        q_x_Tx = q_Tx[0:N_x, 0]
+        q_u_Tx = q_Tx[N_x:(N_x+N_u), 0]
 
         if len(q_u_Tx.shape) == 1:
             q_u_Tx = torch.unsqueeze(q_u_Tx, dim=0)
@@ -66,3 +56,40 @@ class LQR:
         v_Tx = torch.matmul(Q_xu_Tx, k_Tx) + torch.matmul(K_Tx.T, torch.matmul(Q_uu_Tx, k_Tx)) + torch.matmul(K_Tx.T, q_u_Tx) + q_x_Tx
 
         return V_Tx, v_Tx, K_Tx, k_Tx
+
+    def _backward_pass(self, V_Ty, v_Ty):
+        return self.backward_pass(V_Ty, v_Ty, F_Tx=self.F, f_Tx=self.f, C_Tx=self.C, c_Tx=self.c, N_x=self.N_x, N_u=self.N_u)
+
+    def K_horizon(self, N_Steps):
+
+        V_Ty, v_Ty = self.V_i, self.v_i
+
+        for t in range(N_Steps):
+            V_Ty, v_Ty, K, k = self._backward_pass(V_Ty, v_Ty)
+
+        return K, k
+
+    def solve(self, states_initial, time_total):
+
+        Ks = []
+        ks = []
+        V_Ty, v_Ty = self.V_i, self.v_i
+
+        for t in torch.arange(time_total, 0, -self.dt):
+            V_Ty, v_Ty, K_Ty, k_Ty = self._backward_pass(V_Ty, v_Ty)
+            Ks.append(K_Ty)
+            ks.append(k_Ty)
+
+        xs = []
+        us = []
+        ts = torch.arange(0, time_total, self.dt)
+
+        x = states_initial
+
+        xs.append(x)
+        for t, K, k in zip(ts, Ks[::-1], ks[::-1]):
+            x, u = self.step(x, K, k, F=self.F, f=self.f)
+            xs.append(x)
+            us.append(u)
+
+        return ts, xs, us

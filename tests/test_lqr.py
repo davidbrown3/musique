@@ -8,7 +8,8 @@ import torch
 
 from paddington.plants.linear_model import LinearModel
 from paddington.solvers.lqr import LQR
-from paddington.tools.controls_tools import convert_syntax
+from paddington.tools.controls_tools import (convert_syntax_cost_diagonals,
+                                             convert_syntax_transition)
 
 
 class TestAircraftPitch(unittest.TestCase):
@@ -30,19 +31,18 @@ class TestAircraftPitch(unittest.TestCase):
         cx = torch.zeros([3, 1])
         cu = torch.zeros([1, 1])
 
-        F, f, C, c, N_x, N_u = convert_syntax(self.plant.A_d, self.plant.B_d, Cx_diag, Cu_diag, cx, cu)
+        C, c = convert_syntax_cost_diagonals(Cx_diag, Cu_diag, cx, cu)
+
+        F, f = convert_syntax_transition(self.plant.A_d, self.plant.B_d)
 
         # Discrete horizon
-        solver = LQR(F=F, f=f, C=C, c=c, N_x=N_x, N_u=N_u)
+        solver = LQR(F=F, f=f, C=C, c=c, N_x=self.plant.N_x, N_u=self.plant.N_u, dt=0.1)
 
-        V_Tx, v_Tx, _, _ = solver.backward_pass(solver.V_Ty_i, solver.v_Ty_i)
-
-        for _ in torch.arange(100):
-            V_Tx, v_Tx, K_discrete, _ = solver.backward_pass(V_Tx, v_Tx)
+        K_discrete, _ = solver.K_horizon(N_Steps=100)
         K_discrete = torch.squeeze(K_discrete)
 
         # Infinite horizon
-        K_infinite, _, _ = control.lqr(self.plant.A, self.plant.B, Cx_diag.numpy() * np.eye(len(Cx_diag)), Cu_diag.numpy()* np.eye(len(Cu_diag)))
+        K_infinite, _, _ = control.lqr(self.plant.A, self.plant.B, Cx_diag.numpy() * np.eye(len(Cx_diag)), Cu_diag.numpy() * np.eye(len(Cu_diag)))
         # Minus sign for convention
         K_infinite = -torch.squeeze(torch.tensor(K_infinite))
 
@@ -53,8 +53,6 @@ class TestAircraftPitch(unittest.TestCase):
         self.assertLessEqual(K_discrete[0] / K_infinite[0], 1.07)
         self.assertLessEqual(K_discrete[1] / K_infinite[1], 1.07)
         self.assertLessEqual(K_discrete[2] / K_infinite[2], 1.07)
-
-
 
 
 if __name__ == "__main__":

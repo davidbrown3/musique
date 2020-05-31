@@ -20,6 +20,14 @@ class InvertedPendulum(NonLinearModel):
         self.angular_friction = 0.1
 
     @property
+    def N_x(self):
+        return 4
+
+    @property
+    def N_u(self):
+        return 1
+
+    @property
     def mass_total(self):
         return self.mass_pendulum + self.mass_cart
 
@@ -42,7 +50,6 @@ class InvertedPendulum(NonLinearModel):
                 4/3 - self.mass_pendulum * angular_position_cos**2 / self.mass_total
             )
         ) - angular_velocity * self.angular_friction
-
 
         acceleration = (
             force + self.mass_pendulum * self.length * (

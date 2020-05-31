@@ -24,6 +24,14 @@ class LinearModel:
         self.sys = control.ss(self.A, self.B, self.C, self.D)
         self.discretize(dt=self.dt)
 
+    @property
+    def N_x(self):
+        return self.B.shape[0]
+
+    @property
+    def N_u(self):
+        return self.B.shape[1]
+
     def discretize(self, dt):
         self.sys_discrete = control.sample_system(self.sys, dt)
         self.A_d = torch.tensor(self.sys_discrete.A)

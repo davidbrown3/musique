@@ -5,6 +5,14 @@ from paddington.tools.controls_tools import continuous_to_discrete
 
 class NonLinearModel():
 
+    @property
+    def N_x(self):
+        return 0
+
+    @property
+    def N_u(self):
+        return 0
+
     def derivatives(self, x, u):
         return torch.tensor([])
 
@@ -13,7 +21,7 @@ class NonLinearModel():
         return x + dx_dt * dt
 
     def calculate_statespace(self, x, u):
-        return torch.autograd.functional.jacobian(self.derivatives, (x,u))
+        return torch.autograd.functional.jacobian(self.derivatives, (x, u))
 
     def calculate_statespace_discrete(self, x, u, dt):
         A, B = self.calculate_statespace(x, u)

@@ -7,7 +7,8 @@ import torch
 
 from paddington.plants.linear_model import LinearModel
 from paddington.solvers.lqr import LQR
-from paddington.tools.controls_tools import convert_syntax
+from paddington.tools.controls_tools import (convert_syntax_cost_diagonals,
+                                             convert_syntax_transition)
 
 with open_text("paddington.examples.models.linear", "aircraft_pitch.json") as f:
     data = json.load(f)
@@ -18,34 +19,19 @@ Cu_diag = torch.tensor([1.0])
 cx = torch.zeros([3, 1])
 cu = torch.zeros([1, 1])
 
-F, f, C, c, N_x, N_u = convert_syntax(plant.A_d, plant.B_d, Cx_diag, Cu_diag, cx, cu)
+C, c = convert_syntax_cost_diagonals(Cx_diag, Cu_diag, cx, cu)
+F, f = convert_syntax_transition(plant.A_d, plant.B_d)
 
 # Discrete horizon
-solver = LQR(F=F, f=f, C=C, c=c, N_x=N_x, N_u=N_u)
+solver = LQR(F=F, f=f, C=C, c=c, dt=plant.dt, N_x=plant.N_x, N_u=plant.N_u)
 
-Ks = []
-ks = []
-
-V_Ty, v_Ty = solver.V_Ty_i, solver.v_Ty_i
-
-for t in torch.arange(40, 0, -plant.dt):
-    V_Ty, v_Ty, K_Ty, k_Ty = solver.backward_pass(V_Ty, v_Ty)
-    Ks.append(K_Ty)
-    ks.append(k_Ty)
-
-xs = []
-ts = torch.arange(0, 40, plant.dt)
-
-x = torch.tensor([
+states_initial = torch.tensor([
     [0.0],
     [0.0],
     [-1.0]
 ])
 
-xs.append(x)
-for t, K, k in zip(ts, Ks[::-1], ks[::-1]):
-    x = solver.step(x, K, k)
-    xs.append(x)
+ts, xs, us = solver.solve(states_initial=states_initial, time_total=40)
 
 fig = go.Figure()
 
