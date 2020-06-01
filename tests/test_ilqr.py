@@ -1,6 +1,7 @@
 import math
 import unittest
 
+import plotly.graph_objects as go
 import torch
 
 from paddington.examples.models.nonlinear.inverted_pendulum import \
@@ -54,9 +55,27 @@ class TestILQR(unittest.TestCase):
 
     def test_ilqr(self):
 
-        states_initial = torch.tensor([[1.0], [0.0], [0.0], [0.0]], requires_grad=True)
+        states_initial = torch.tensor([[5.0], [0.0], [0.0], [0.0]])
         time_total = 40
-        self.solver.solve(states_initial, time_total)
+        xs, us = self.solver.solve(states_initial, time_total)
+
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Scatter(
+                y=[x[2, 0] for x in xs],
+                name='angular position'
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                y=[x[0, 0] for x in xs],
+                name='linear position'
+            )
+        )
+
+        fig.show()
 
 
 if __name__ == "__main__":

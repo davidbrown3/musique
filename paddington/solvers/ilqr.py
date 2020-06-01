@@ -28,17 +28,20 @@ class iLQR:
 
         ts, x_bars, u_bars = self.initial_guess_lqr(states_initial=states_initial, time_total=time_total)
 
-        print(
-            torch.sum(
-                torch.cat(
-                    [self.cost_function.calculate_cost(x, u) for x, u in zip(x_bars, u_bars)]
-                )
-            )
-        )
+        cost = torch.sum(torch.cat(
+            [self.cost_function.calculate_cost(x, u) for x, u in zip(x_bars, u_bars)]
+        ))
 
-        for _ in range(5):
+        print(cost)
+        dcost = 100
+        while dcost > 0.01:
+            cost_prev = cost
             Ks, ks = self.backward_pass(xs=x_bars, us=u_bars)
-            x_bars, u_bars = self.forward_pass(x_bars=x_bars, u_bars=u_bars, Ks=Ks, ks=ks)
+            x_bars, u_bars, cost = self.forward_pass(x_bars=x_bars, u_bars=u_bars, Ks=Ks, ks=ks)
+            print(cost)
+            dcost = (cost - cost_prev) / cost
+
+        return x_bars, u_bars
 
     def backward_pass(self, xs, us):
 
@@ -83,6 +86,5 @@ class iLQR:
             us.append(u)
 
         us.append(u * 0.0)
-        print(cost)
 
-        return xs, us
+        return xs, us, cost
