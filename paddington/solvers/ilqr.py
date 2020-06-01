@@ -24,22 +24,24 @@ class iLQR:
 
         return lqr.solve(states_initial, time_total)
 
-    def solve(self, states_initial, time_total):
+    def solve(self, states_initial, time_total, convergence=1e-4):
 
         ts, x_bars, u_bars = self.initial_guess_lqr(states_initial=states_initial, time_total=time_total)
 
-        cost = torch.sum(torch.cat(
+        cost_prev = torch.sum(torch.cat(
             [self.cost_function.calculate_cost(x, u) for x, u in zip(x_bars, u_bars)]
         ))
 
-        print(cost)
-        dcost = 100
-        while dcost > 0.01:
+        print(cost_prev)
+
+        # Setting up while loop
+        cost = cost_prev
+        cost_prev = cost * 2.0
+        while (torch.abs((cost - cost_prev)) / cost) > convergence:
             cost_prev = cost
             Ks, ks = self.backward_pass(xs=x_bars, us=u_bars)
             x_bars, u_bars, cost = self.forward_pass(x_bars=x_bars, u_bars=u_bars, Ks=Ks, ks=ks)
             print(cost)
-            dcost = (cost - cost_prev) / cost
 
         return x_bars, u_bars
 
@@ -70,7 +72,7 @@ class iLQR:
 
         return Ks[::-1], ks[::-1]
 
-    def forward_pass(self, x_bars, u_bars, Ks, ks, alpha=1.0):
+    def forward_pass(self, x_bars, u_bars, Ks, ks, alpha=0.1):
 
         x = x_bars[0]
         xs = []

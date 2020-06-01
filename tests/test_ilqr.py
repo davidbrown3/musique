@@ -55,7 +55,7 @@ class TestILQR(unittest.TestCase):
 
     def test_ilqr(self):
 
-        states_initial = torch.tensor([[5.0], [0.0], [0.0], [0.0]])
+        states_initial = torch.tensor([[5.0], [0.0], [math.pi/4], [0.0]])
         time_total = 40
         xs, us = self.solver.solve(states_initial, time_total)
 
