@@ -41,11 +41,8 @@ class LQR:
         Q_uu_Tx = Q_Tx[N_x:(N_x+N_u), N_x:(N_x+N_u)]
         Q_ux_Tx = Q_Tx[N_x:(N_x+N_u), 0:N_x]
         Q_xu_Tx = Q_Tx[0:N_x, N_x:(N_x+N_u)]
-        q_x_Tx = q_Tx[0:N_x, 0]
-        q_u_Tx = q_Tx[N_x:(N_x+N_u), 0]
-
-        if len(q_u_Tx.shape) == 1:
-            q_u_Tx = torch.unsqueeze(q_u_Tx, dim=0)
+        q_x_Tx = q_Tx[0:N_x]
+        q_u_Tx = q_Tx[N_x:(N_x+N_u)]
 
         # Control constants
         K_Tx, _ = torch.solve(Q_ux_Tx, -Q_uu_Tx)
@@ -54,6 +51,8 @@ class LQR:
         # Value function constants
         V_Tx = Q_xx_Tx + torch.matmul(Q_xu_Tx, K_Tx) + torch.matmul(K_Tx.T, Q_ux_Tx) + torch.matmul(K_Tx.T, torch.matmul(Q_uu_Tx, K_Tx))
         v_Tx = torch.matmul(Q_xu_Tx, k_Tx) + torch.matmul(K_Tx.T, torch.matmul(Q_uu_Tx, k_Tx)) + torch.matmul(K_Tx.T, q_u_Tx) + q_x_Tx
+
+        assert(v_Tx.shape[1] == 1)  # TODO: Replace with unittest
 
         return V_Tx, v_Tx, K_Tx, k_Tx
 
@@ -88,8 +87,8 @@ class LQR:
 
         xs.append(x)
         for t, K, k in zip(ts, Ks[::-1], ks[::-1]):
-            x, u = self.step(x, K, k, F=self.F, f=self.f)
+            x, u = self.step(x=x, K=K, k=k, F=self.F, f=self.f)
             xs.append(x)
             us.append(u)
-
+        us.append(u * 0.0)
         return ts, xs, us

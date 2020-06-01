@@ -3,7 +3,7 @@ import unittest
 from collections import namedtuple
 
 import torch
-from genty import genty, genty_dataset, genty_repeat
+from genty import genty, genty_dataset
 
 from paddington.examples.models.nonlinear.inverted_pendulum import \
     InvertedPendulum
@@ -55,7 +55,7 @@ class TestPendulum(unittest.TestCase):
         # Process
         derivatives_0 = self.problem.derivatives(states_0, controls_0)
         A, B = self.problem.calculate_statespace(states_0, controls_0)
-        hessian = self.problem.hessian(states_0, controls_0)
+        hessian = self.problem.calculate_hessian(states_0, controls_0)
 
         # Tests
         self.compare_jacobian(A, B, states_0, controls_0, states_delta, controls_delta, derivatives_0)

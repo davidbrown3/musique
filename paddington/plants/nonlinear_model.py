@@ -27,5 +27,8 @@ class NonLinearModel():
         A, B = self.calculate_statespace(x, u)
         return continuous_to_discrete(A, B, dt)
 
-    def hessian(self, x, u):
+    def calculate_hessian(self, x, u):
         return [torch.autograd.functional.hessian(lambda x, u: self.derivatives(x, u)[i], (x, u)) for i in range(len(x))]
+
+    def calculate_hessian_discrete(self, x, u, dt):
+        return [torch.autograd.functional.hessian(lambda x, u: self.step(x, u, dt)[i], (x, u)) for i in range(len(x))]

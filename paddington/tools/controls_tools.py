@@ -25,7 +25,7 @@ class quadratic_cost_function(cost_function):
     def __init__(self, Cx_diag, Cu_diag, cx, cu):
         C_stacked = torch.cat((Cx_diag, Cu_diag))
         self.C = torch.eye(len(C_stacked)) * C_stacked
-        self.c = torch.stack((cx, cu))
+        self.c = torch.cat((cx, cu))
 
     def calculate_cost(self, x, u):
         stacked = torch.cat((x, u))
@@ -37,7 +37,8 @@ class quadratic_cost_function(cost_function):
 
     def calculate_cost_jacobian(self, x, u):
         # For quadratic cost function, hessian is just the matrix
-        return self.c
+        stacked = torch.cat((x, u))
+        return torch.matmul(self.C, stacked) + self.c
 
 
 def convert_syntax_transition(A, B):
