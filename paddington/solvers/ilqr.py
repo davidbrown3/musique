@@ -87,6 +87,4 @@ class iLQR:
             x = self.plant.step(x, u, dt=self.dt)
             us.append(u)
 
-        us.append(u * 0.0)
-
         return xs, us, cost
