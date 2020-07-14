@@ -7,29 +7,26 @@ import torch
 
 from paddington.plants.linear_model import LinearModel
 from paddington.solvers.lqr import LQR
-from paddington.tools.controls_tools import (convert_syntax_cost_diagonals,
-                                             convert_syntax_transition)
+from paddington.tools.controls_tools import diagonalize
 
 with open_text("paddington.examples.models.linear", "aircraft_pitch.json") as f:
     data = json.load(f)
     plant = LinearModel.from_dict(data)
 
-Cx_diag = torch.tensor([0.0, 0.0, 2.0])
-Cu_diag = torch.tensor([1.0])
-cx = torch.zeros([3, 1])
-cu = torch.zeros([1, 1])
-
-C, c = convert_syntax_cost_diagonals(Cx_diag, Cu_diag, cx, cu)
-F, f = convert_syntax_transition(plant.A_d, plant.B_d)
+g_xx = diagonalize(torch.tensor([0.0, 0.0, 2.0], dtype=torch.float64))
+g_uu = diagonalize(torch.tensor([1.0], dtype=torch.float64))
+g_xu = torch.zeros([1, 1], dtype=torch.float64)
+g_x = torch.zeros([1, 3], dtype=torch.float64)
+g_u = torch.zeros([1, 1], dtype=torch.float64)
 
 # Discrete horizon
-solver = LQR(F=F, f=f, C=C, c=c, dt=plant.dt, N_x=plant.N_x, N_u=plant.N_u)
+solver = LQR(T_x=plant.A_d, T_u=plant.B_d, g_x=g_x, g_u=g_u, g_xx=g_xx, g_uu=g_uu, g_xu=g_xu, dt=plant.dt)
 
 states_initial = torch.tensor([
     [0.0],
     [0.0],
     [-1.0]
-])
+], dtype=torch.float64)
 
 ts, xs, us = solver.solve(states_initial=states_initial, time_total=40)
 
