@@ -41,19 +41,6 @@ class quadratic_cost_function(cost_function):
         return torch.matmul(self.C, stacked) + self.c
 
 
-def convert_syntax_transition(A, B):
+def diagonalize(diagonal):
 
-    # Changing syntax of linear dynamics
-    F = torch.cat((A, B), dim=1).float()  # TODO: Remove this
-    f = torch.zeros([len(F), 1])
-
-    return F, f
-
-
-def convert_syntax_cost_diagonals(Cx_diag, Cu_diag, cx, cu):
-
-    C_stacked = torch.cat((Cx_diag, Cu_diag), dim=0)
-    C = torch.eye(len(C_stacked)) * C_stacked
-    c = torch.cat((cx, cu), dim=0)
-
-    return C, c
+    return torch.eye(len(diagonal)) * diagonal
