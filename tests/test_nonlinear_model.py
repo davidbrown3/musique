@@ -75,12 +75,17 @@ class TestPendulum(unittest.TestCase):
 
         A_rows = []
         B_rows = []
+
         for hess in hessian:
+
+            # TODO: cat hess[0][0] & hess[0][1] along axis 1, cat states, controls along axis 0
             A_rows.append(
-                torch.matmul(hess[0][0], states_delta) + torch.matmul(hess[0][1], controls_delta)
+                torch.matmul(hess[0][0], states_delta) +  # Txx
+                torch.matmul(hess[0][1], controls_delta)  # Txu
             )
             B_rows.append(
-                torch.matmul(hess[1][0], states_delta) + torch.matmul(hess[1][1], controls_delta)
+                torch.matmul(hess[1][0], states_delta) +  # Tux
+                torch.matmul(hess[1][1], controls_delta)  # Tuu
             )
 
         dA_linear = torch.stack(A_rows)

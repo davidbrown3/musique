@@ -58,7 +58,6 @@ class iLQR:
         ks = []
         for x, u in zip(xs[::-1], us[::-1]):
 
-            # TODO: Want jacobian, not state space
             A_d, B_d = self.plant.calculate_statespace_discrete(x=x[:, 0], u=u[:, 0], dt=self.dt)
             F_Tx, f_Tx = convert_syntax_transition(A_d, B_d)
             C_Tx = self.cost_function.calculate_cost_hessian(x=x, u=u)

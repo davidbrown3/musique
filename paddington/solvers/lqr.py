@@ -48,8 +48,8 @@ class LQR:
         alpha, _ = torch.solve(Q_u, -Q_uu)
 
         # Return function constants
-        R_xx = g_xx + torch.matmul(g_xu, beta) + torch.matmul(beta.T, g_ux) + torch.matmul(beta.T, torch.matmul(g_uu, beta))
-        R_x = g_x + torch.matmul(g_u, beta) + torch.matmul(g_xu, alpha) + torch.matmul(alpha.T, torch.matmul(g_uu, beta))
+        R_xx = Q_xx + torch.matmul(Q_xu, beta) + torch.matmul(beta.T, Q_ux) + torch.matmul(beta.T, torch.matmul(Q_uu, beta))
+        R_x = Q_x + torch.matmul(Q_u, beta) + torch.matmul(Q_xu, alpha).T + torch.matmul(alpha.T, torch.matmul(Q_uu, beta))
 
         assert(R_x.shape[0] == 1)  # TODO: Replace with unittest
 

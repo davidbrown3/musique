@@ -15,7 +15,7 @@ with open_text("paddington.examples.models.linear", "aircraft_pitch.json") as f:
 
 g_xx = diagonalize(torch.tensor([0.0, 0.0, 2.0], dtype=torch.float64))
 g_uu = diagonalize(torch.tensor([1.0], dtype=torch.float64))
-g_xu = torch.zeros([1, 1], dtype=torch.float64)
+g_xu = torch.zeros([3, 1], dtype=torch.float64)
 g_x = torch.zeros([1, 3], dtype=torch.float64)
 g_u = torch.zeros([1, 1], dtype=torch.float64)
 
