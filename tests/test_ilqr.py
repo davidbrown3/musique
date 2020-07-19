@@ -15,12 +15,12 @@ class TestQuadraticCost(unittest.TestCase):
 
     def setUp(self):
 
-        g_xx_0 = diagonalize(torch.tensor([0.1, 0.0, 2.0, 0.0], dtype=torch.float64))
-        g_xu_0 = torch.zeros([4, 1], dtype=torch.float64)
-        g_uu_0 = torch.tensor([[0.1]], dtype=torch.float64)
-        g_x_0 = torch.tensor([[0.0, 0.0, 0.0, 0.0]], dtype=torch.float64)
-        g_u_0 = torch.tensor([[0.0]], dtype=torch.float64)
-        self.cost_function = quadratic_cost_function(g_xx_0, g_xu_0, g_uu_0, g_x_0, g_u_0)
+        g_xx = diagonalize(torch.tensor([0.1, 0.0, 2.0, 0.0], dtype=torch.float64))
+        g_xu = torch.zeros([4, 1], dtype=torch.float64)
+        g_uu = torch.tensor([[0.1]], dtype=torch.float64)
+        g_x = torch.tensor([[0.0, 0.0, 0.0, 0.0]], dtype=torch.float64)
+        g_u = torch.tensor([[0.0]], dtype=torch.float64)
+        self.cost_function = quadratic_cost_function(g_xx=g_xx, g_xu=g_xu, g_uu=g_uu, g_x=g_x, g_u=g_u)
 
     def test_jacobian(self):
 
@@ -51,20 +51,21 @@ class TestILQR(unittest.TestCase):
 
         self.plant = InvertedPendulum()
 
-        Cx_diag = torch.tensor([0.1, 0.0, 0.2, 0.0])
-        Cu_diag = torch.tensor([0.01])
-        cx = torch.tensor([[0.0], [0.0], [0.0], [0.0]])
-        cu = torch.tensor([[0.0]])
-        self.cost_function = quadratic_cost_function(Cx_diag, Cu_diag, cx, cu)
+        g_xx = diagonalize(torch.tensor([0.1, 0.0, 0.2, 0.0], dtype=torch.float64))
+        g_uu = torch.tensor([[0.01]], dtype=torch.float64)
+        g_xu = torch.zeros([4, 1], dtype=torch.float64)
+        g_x = torch.tensor([[0.0, 0.0, 0.0, 0.0]], dtype=torch.float64)
+        g_u = torch.tensor([[0.0]], dtype=torch.float64)
+        self.cost_function = quadratic_cost_function(g_xx=g_xx, g_xu=g_xu, g_uu=g_uu, g_x=g_x, g_u=g_u)
 
-        dt = 0.1
+        dt = 0.025
 
         self.solver = iLQR(plant=self.plant, cost_function=self.cost_function, dt=dt)
 
     def test_ilqr(self):
 
-        states_initial = torch.tensor([[5.0], [0.0], [math.pi/4], [0.0]])
-        time_total = 40
+        states_initial = torch.tensor([[5.0], [0.0], [math.pi/8], [0.0]], dtype=torch.float64)
+        time_total = 10
         xs, us = self.solver.solve(states_initial, time_total)
 
         fig = go.Figure()

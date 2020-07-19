@@ -71,7 +71,7 @@ class quadratic_cost_function(cost_function):
         g_xx = self.calculate_g_xx(x, u)
         g_ux = self.calculate_g_ux(x, u)
 
-        return torch.matmul(g_xx, x).T + torch.matmul(u.T, g_ux).T + self.g_x
+        return torch.matmul(g_xx, x).T + torch.matmul(u.T, g_ux) + self.g_x
 
     def calculate_g_u(self, x, u):
 
