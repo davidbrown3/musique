@@ -13,17 +13,17 @@ class iLQR:
 
     def initial_guess_lqr(self, states_initial, time_total):
 
-        controls_initial = torch.zeros([self.plant.N_u, 1])
+        controls_initial = torch.zeros([self.plant.N_u, 1], dtype=torch.float64)
         A_d, B_d = self.plant.calculate_statespace_discrete(x=states_initial[:, 0], u=controls_initial[:, 0], dt=self.dt)
 
-        lqr = LQR(T_x=self.plant.A_d,
-                  T_u=self.plant.B_d,
+        lqr = LQR(T_x=A_d,
+                  T_u=B_d,
                   g_x=self.cost_function.calculate_g_x(x=states_initial, u=controls_initial),
                   g_u=self.cost_function.calculate_g_u(x=states_initial, u=controls_initial),
                   g_xx=self.cost_function.calculate_g_xx(x=states_initial, u=controls_initial),
                   g_uu=self.cost_function.calculate_g_uu(x=states_initial, u=controls_initial),
                   g_xu=self.cost_function.calculate_g_xu(x=states_initial, u=controls_initial),
-                  dt=self.plant.dt)
+                  dt=self.dt)
 
         return lqr.solve(states_initial, time_total)
 
@@ -42,19 +42,16 @@ class iLQR:
         cost_prev = cost * 2.0
         while (torch.abs((cost - cost_prev)) / cost) > convergence:
             cost_prev = cost
-            Ks, ks = self.backward_pass(xs=x_bars, us=u_bars)
-            x_bars, u_bars, cost = self.forward_pass(x_bars=x_bars, u_bars=u_bars, Ks=Ks, ks=ks)
+            betas, alphas = self.backward_pass(xs=x_bars, us=u_bars)
+            x_bars, u_bars, cost = self.forward_pass(x_bars=x_bars, u_bars=u_bars, betas=betas, alphas=alphas)
             print(cost)
 
         return x_bars, u_bars
 
     def backward_pass(self, xs, us):
 
-        # Initialisation
-        A_d, B_d = self.plant.calculate_statespace_discrete(x=xs[-1][:, 0], u=us[-1][:, 0], dt=self.dt)
-
-        R_xx = torch.zeros([self.plant.N_x, self.plant.N_x])
-        R_x = torch.zeros([1, self.plant.N_x])
+        R_xx = torch.zeros([self.plant.N_x, self.plant.N_x], dtype=torch.float64)
+        R_x = torch.zeros([1, self.plant.N_x], dtype=torch.float64)
 
         betas = []
         alphas = []
@@ -77,7 +74,7 @@ class iLQR:
 
         return betas[::-1], alphas[::-1]
 
-    def forward_pass(self, x_bars, u_bars, betas, alphas, line_alpha=1.0):
+    def forward_pass(self, x_bars, u_bars, betas, alphas, line_alpha=0.1):
 
         x = x_bars[0]
         xs = []
