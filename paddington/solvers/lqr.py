@@ -15,6 +15,24 @@ class LQR:
         self.g_xu = g_xu
         self.dt = dt
 
+        N_x = T_x.shape[0]
+        N_u = T_u.shape[1]
+
+        if T_x.shape != (N_x, N_x):
+            raise ValueError('T_x must have be a square matrix')
+        if T_u.shape != (N_x, N_u):
+            raise ValueError('T_u must have shape (N_x, N_u)')
+        if g_xx.shape != (N_x, N_x):
+            raise ValueError('g_xx must have shape (N_x, N_x)')
+        if g_xu.shape != (N_x, N_u):
+            raise ValueError('g_xu must have  shape (N_x, N_u)')
+        if g_uu.shape != (N_u, N_u):
+            raise ValueError('g_uu must have  shape (N_u, N_u)')
+        if g_x.shape != (1, N_x):
+            raise ValueError('g_x must have  shape (N_x, 1)')
+        if g_u.shape != (1, N_u):
+            raise ValueError('g_u must have  shape (N_u, 1)')
+
         # Initialisation
         self.R_x, self.R_xx, _, _ = self._backward_pass(
             R_xx=torch.zeros_like(g_xx, dtype=torch.float64),
@@ -30,10 +48,7 @@ class LQR:
         return x_new, u
 
     @staticmethod
-    def backward_pass(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu):
-
-        # Derivation
-        g_ux = g_xu.T
+    def calculate_Q_partials(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu):
 
         # Q Value
         Q_xx = g_xx + torch.matmul(T_x.T, torch.matmul(R_xx, T_x))
@@ -43,9 +58,20 @@ class LQR:
         Q_x = g_x + torch.matmul(R_x, T_x)
         Q_u = torch.matmul(R_x, T_u)
 
-        # Control constants
+        return Q_xx, Q_uu, Q_xu, Q_ux, Q_x, Q_u
+
+    def calculate_control_gains(Q_ux, Q_uu, Q_u):
+
         beta, _ = torch.solve(Q_ux, -Q_uu)
         alpha, _ = torch.solve(Q_u, -Q_uu)
+
+        return beta, alpha
+
+    @staticmethod
+    def backward_pass(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu):
+
+        Q_xx, Q_uu, Q_xu, Q_ux, Q_x, Q_u = LQR.calculate_Q_partials(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu)
+        beta, alpha = LQR.calculate_control_gains(Q_ux, Q_uu, Q_u)
 
         # Return function constants
         R_xx = Q_xx + torch.matmul(Q_xu, beta) + torch.matmul(beta.T, Q_ux) + torch.matmul(beta.T, torch.matmul(Q_uu, beta))
@@ -56,7 +82,7 @@ class LQR:
         return R_x, R_xx, beta, alpha
 
     def _backward_pass(self, R_x, R_xx):
-        return self.backward_pass(R_x=R_x, R_xx=R_xx, T_x=self.T_x, T_u=self.T_u, g_x=self.g_x, g_u=self.g_u, g_xx=self.g_xx, g_uu=self.g_uu, g_xu=self.g_xu)
+        return LQR.backward_pass(R_x=R_x, R_xx=R_xx, T_x=self.T_x, T_u=self.T_u, g_x=self.g_x, g_u=self.g_u, g_xx=self.g_xx, g_uu=self.g_uu, g_xu=self.g_xu)
 
     def K_horizon(self, N_Steps):
 
