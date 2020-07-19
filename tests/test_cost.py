@@ -1,3 +1,4 @@
+import itertools
 import unittest
 from collections import namedtuple
 
@@ -22,6 +23,7 @@ class TestQuadraticCost(unittest.TestCase):
         torch.tensor([[0.0]], dtype=torch.float64),
         torch.tensor([[-1.0]], dtype=torch.float64),
     ]
+
     Case = namedtuple('Case', 'states controls')
 
     cases = []
@@ -50,12 +52,29 @@ class TestQuadraticCost(unittest.TestCase):
         [self.assertAlmostEqual(l, n, places=4) for l, n in zip(auto_jacobian[1].tolist(), g_u.tolist())]
         [self.assertAlmostEqual(l, n, places=4) for l, n in zip(auto_jacobian[0].tolist(), g_x.tolist())]
 
-    def test_hessian(self):
+    @genty_dataset(
+        *cases
+    )
+    def test_hessian(self, states, controls):
 
-        states_initial = torch.tensor([[-5.0], [0.0], [0.0], [0.0]], dtype=torch.float64)
-        controls_initial = torch.tensor([[0.0]], dtype=torch.float64)
-        hessian_1 = self.cost_function.calculate_cost_hessian(x=states_initial, u=controls_initial)
-        hessian_2 = torch.autograd.functional.hessian(self.cost_function.calculate_cost, (states_initial[:, 0], controls_initial[:, 0]))
+        g_uu = self.cost_function.calculate_g_uu(x=states, u=controls)
+        g_xx = self.cost_function.calculate_g_xx(x=states, u=controls)
+        g_xu = self.cost_function.calculate_g_xu(x=states, u=controls)
+
+        hessian = torch.autograd.functional.hessian(self.cost_function.calculate_cost, (states[:, 0], controls[:, 0]))
+
+        hessian_xx_flat = list(itertools.chain.from_iterable(hessian[0][0].tolist()))
+        g_xx_flat = list(itertools.chain.from_iterable(g_xx.tolist()))
+
+        hessian_xu_flat = list(itertools.chain.from_iterable(hessian[0][1].tolist()))
+        g_xu_flat = list(itertools.chain.from_iterable(g_xu.tolist()))
+
+        hessian_uu_flat = list(itertools.chain.from_iterable(hessian[1][1].tolist()))
+        g_uu_flat = list(itertools.chain.from_iterable(g_uu.tolist()))
+
+        [self.assertAlmostEqual(l, n, places=4) for l, n in zip(hessian_xx_flat, g_xx_flat)]
+        [self.assertAlmostEqual(l, n, places=4) for l, n in zip(hessian_xu_flat, g_xu_flat)]
+        [self.assertAlmostEqual(l, n, places=4) for l, n in zip(hessian_uu_flat, g_uu_flat)]
 
 
 if __name__ == "__main__":
