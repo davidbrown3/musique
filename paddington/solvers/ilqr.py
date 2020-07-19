@@ -1,7 +1,6 @@
 import torch
 
 from paddington.solvers.lqr import LQR
-from paddington.tools.controls_tools import convert_syntax_transition
 
 
 class iLQR:
@@ -16,11 +15,15 @@ class iLQR:
 
         controls_initial = torch.zeros([self.plant.N_u, 1])
         A_d, B_d = self.plant.calculate_statespace_discrete(x=states_initial[:, 0], u=controls_initial[:, 0], dt=self.dt)
-        F, f = convert_syntax_transition(A_d, B_d)
-        C = self.cost_function.calculate_cost_hessian(x=states_initial, u=controls_initial)
-        c = self.cost_function.calculate_cost_jacobian(x=states_initial, u=controls_initial)
 
-        lqr = LQR(F=F, f=f, C=C, c=c, dt=self.dt, N_x=self.plant.N_x, N_u=self.plant.N_u)
+        lqr = LQR(T_x=self.plant.A_d,
+                  T_u=self.plant.B_d,
+                  g_x=self.cost_function.calculate_g_x(x=states_initial, u=controls_initial),
+                  g_u=self.cost_function.calculate_g_u(x=states_initial, u=controls_initial),
+                  g_xx=self.cost_function.calculate_g_xx(x=states_initial, u=controls_initial),
+                  g_uu=self.cost_function.calculate_g_uu(x=states_initial, u=controls_initial),
+                  g_xu=self.cost_function.calculate_g_xu(x=states_initial, u=controls_initial),
+                  dt=self.plant.dt)
 
         return lqr.solve(states_initial, time_total)
 
@@ -49,38 +52,41 @@ class iLQR:
 
         # Initialisation
         A_d, B_d = self.plant.calculate_statespace_discrete(x=xs[-1][:, 0], u=us[-1][:, 0], dt=self.dt)
-        F, f = convert_syntax_transition(A_d, B_d)
 
-        V_Ty = torch.zeros([self.plant.N_x, self.plant.N_x])
-        v_Ty = torch.zeros([self.plant.N_x, 1])
+        R_xx = torch.zeros([self.plant.N_x, self.plant.N_x])
+        R_x = torch.zeros([1, self.plant.N_x])
 
-        Ks = []
-        ks = []
+        betas = []
+        alphas = []
         for x, u in zip(xs[::-1], us[::-1]):
 
-            A_d, B_d = self.plant.calculate_statespace_discrete(x=x[:, 0], u=u[:, 0], dt=self.dt)
-            F_Tx, f_Tx = convert_syntax_transition(A_d, B_d)
-            C_Tx = self.cost_function.calculate_cost_hessian(x=x, u=u)
-            c_Tx = self.cost_function.calculate_cost_jacobian(x=x, u=u)
+            T_x, T_u = self.plant.calculate_statespace_discrete(x=x[:, 0], u=u[:, 0], dt=self.dt)
 
-            V_Ty, v_Ty, K_Tx, k_Tx = LQR.backward_pass(V_Ty=V_Ty, v_Ty=v_Ty, F_Tx=F_Tx, f_Tx=f_Tx, C_Tx=C_Tx, c_Tx=c_Tx,
-                                                       N_x=self.plant.N_x, N_u=self.plant.N_u)
+            R_x, R_xx, beta, alpha = LQR.backward_pass(R_x=R_x,
+                                                       R_xx=R_xx,
+                                                       T_x=T_x,
+                                                       T_u=T_u,
+                                                       g_x=self.cost_function.calculate_g_x(x=x, u=u),
+                                                       g_u=self.cost_function.calculate_g_u(x=x, u=u),
+                                                       g_xx=self.cost_function.calculate_g_xx(x=x, u=u),
+                                                       g_uu=self.cost_function.calculate_g_uu(x=x, u=u),
+                                                       g_xu=self.cost_function.calculate_g_xu(x=x, u=u))
 
-            Ks.append(K_Tx)
-            ks.append(k_Tx)
+            betas.append(beta)
+            alphas.append(alpha)
 
-        return Ks[::-1], ks[::-1]
+        return betas[::-1], alphas[::-1]
 
-    def forward_pass(self, x_bars, u_bars, Ks, ks, alpha=0.1):
+    def forward_pass(self, x_bars, u_bars, betas, alphas, line_alpha=1.0):
 
         x = x_bars[0]
         xs = []
         us = []
         cost = 0
-        for x_bar, u_bar, K, k in zip(x_bars, u_bars, Ks, ks):
+        for x_bar, u_bar, beta, alpha in zip(x_bars, u_bars, betas, alphas):
             xs.append(x)
             dx = x - x_bar
-            du = torch.matmul(K, dx) + alpha * k
+            du = torch.matmul(beta, dx) + line_alpha * alpha
             u = u_bar + du
             cost += self.cost_function.calculate_cost(x, u)
             x = self.plant.step(x, u, dt=self.dt)
