@@ -60,6 +60,8 @@ class iLQR:
 
             T_x, T_u = self.plant.calculate_statespace_discrete(x=x[:, 0], u=u[:, 0], dt=self.dt)
 
+            # Faster to do a 2nd diff on statespace than calculate hessian fresh
+
             R_x, R_xx, beta, alpha = LQR.backward_pass(R_x=R_x,
                                                        R_xx=R_xx,
                                                        T_x=T_x,

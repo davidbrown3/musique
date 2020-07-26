@@ -1,15 +1,11 @@
 import math
 import unittest
-from collections import namedtuple
 
 import plotly.graph_objects as go
 import torch
-from genty import genty, genty_dataset
 
-from paddington.examples.models.nonlinear.inverted_pendulum import \
-    InvertedPendulum
+from paddington.examples.models.nonlinear.cart_pole import CartPole
 from paddington.solvers.ilqr import iLQR
-from paddington.solvers.lqr import LQR
 from paddington.tools.controls_tools import (diagonalize,
                                              quadratic_cost_function)
 
@@ -18,7 +14,7 @@ class TestILQR(unittest.TestCase):
 
     def setUp(self):
 
-        self.plant = InvertedPendulum()
+        self.plant = CartPole()
 
         g_xx = diagonalize(torch.tensor([0.1, 0.0, 0.2, 0.0]))
         g_uu = torch.tensor([[0.01]])
@@ -51,6 +47,13 @@ class TestILQR(unittest.TestCase):
             go.Scatter(
                 y=[x[0, 0] for x in xs],
                 name='linear position'
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                y=[u[0, 0] for u in us],
+                name='control'
             )
         )
 

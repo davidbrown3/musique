@@ -3,7 +3,7 @@ import torch
 from paddington.plants.nonlinear_model import NonLinearModel
 
 
-class InvertedPendulum(NonLinearModel):
+class CartPole(NonLinearModel):
     '''
     Example documented at:
     https://coneural.org/florian/papers/05_cart_pole.pdf
