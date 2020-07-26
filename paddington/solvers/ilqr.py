@@ -13,7 +13,7 @@ class iLQR:
 
     def initial_guess_lqr(self, states_initial, time_total):
 
-        controls_initial = torch.zeros([self.plant.N_u, 1], dtype=torch.float64)
+        controls_initial = torch.zeros([self.plant.N_u, 1])
         A_d, B_d = self.plant.calculate_statespace_discrete(x=states_initial[:, 0], u=controls_initial[:, 0], dt=self.dt)
 
         lqr = LQR(T_x=A_d,
@@ -23,6 +23,7 @@ class iLQR:
                   g_xx=self.cost_function.calculate_g_xx(x=states_initial, u=controls_initial),
                   g_uu=self.cost_function.calculate_g_uu(x=states_initial, u=controls_initial),
                   g_xu=self.cost_function.calculate_g_xu(x=states_initial, u=controls_initial),
+                  g_ux=self.cost_function.calculate_g_ux(x=states_initial, u=controls_initial),
                   dt=self.dt)
 
         return lqr.solve(states_initial, time_total)
@@ -50,8 +51,8 @@ class iLQR:
 
     def backward_pass(self, xs, us):
 
-        R_xx = torch.zeros([self.plant.N_x, self.plant.N_x], dtype=torch.float64)
-        R_x = torch.zeros([1, self.plant.N_x], dtype=torch.float64)
+        R_xx = torch.zeros([self.plant.N_x, self.plant.N_x])
+        R_x = torch.zeros([1, self.plant.N_x])
 
         betas = []
         alphas = []
@@ -67,7 +68,8 @@ class iLQR:
                                                        g_u=self.cost_function.calculate_g_u(x=x, u=u),
                                                        g_xx=self.cost_function.calculate_g_xx(x=x, u=u),
                                                        g_uu=self.cost_function.calculate_g_uu(x=x, u=u),
-                                                       g_xu=self.cost_function.calculate_g_xu(x=x, u=u))
+                                                       g_xu=self.cost_function.calculate_g_xu(x=x, u=u),
+                                                       g_ux=self.cost_function.calculate_g_ux(x=x, u=u))
 
             betas.append(beta)
             alphas.append(alpha)

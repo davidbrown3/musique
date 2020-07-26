@@ -17,11 +17,13 @@ class TestQuadraticCost(unittest.TestCase):
         torch.tensor([[-1.0], [-1.0], [0.0], [0.0]], dtype=torch.float64),
         torch.tensor([[-1.0], [-1.0], [-1.0], [0.0]], dtype=torch.float64),
         torch.tensor([[-1.0], [-1.0], [-1.0], [-1.0]], dtype=torch.float64),
+        torch.tensor([[-2.0], [-3.0], [-4.0], [-5.0]], dtype=torch.float64),
     ]
 
     controls = [
         torch.tensor([[0.0]], dtype=torch.float64),
         torch.tensor([[-1.0]], dtype=torch.float64),
+        torch.tensor([[-2.0]], dtype=torch.float64),
     ]
 
     Case = namedtuple('Case', 'states controls')

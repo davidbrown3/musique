@@ -9,6 +9,7 @@ from genty import genty, genty_dataset
 from paddington.examples.models.nonlinear.inverted_pendulum import \
     InvertedPendulum
 from paddington.solvers.ilqr import iLQR
+from paddington.solvers.lqr import LQR
 from paddington.tools.controls_tools import (diagonalize,
                                              quadratic_cost_function)
 
@@ -19,12 +20,13 @@ class TestILQR(unittest.TestCase):
 
         self.plant = InvertedPendulum()
 
-        g_xx = diagonalize(torch.tensor([0.1, 0.0, 0.2, 0.0], dtype=torch.float64))
-        g_uu = torch.tensor([[0.01]], dtype=torch.float64)
-        g_xu = torch.zeros([4, 1], dtype=torch.float64)
-        g_x = torch.tensor([[0.0, 0.0, 0.0, 0.0]], dtype=torch.float64)
-        g_u = torch.tensor([[0.0]], dtype=torch.float64)
-        self.cost_function = quadratic_cost_function(g_xx=g_xx, g_xu=g_xu, g_uu=g_uu, g_x=g_x, g_u=g_u)
+        g_xx = diagonalize(torch.tensor([0.1, 0.0, 0.2, 0.0]))
+        g_uu = torch.tensor([[0.01]])
+        g_xu = torch.zeros([4, 1])
+        g_ux = torch.zeros([1, 4])
+        g_x = torch.tensor([[0.0, 0.0, 0.0, 0.0]])
+        g_u = torch.tensor([[0.0]])
+        self.cost_function = quadratic_cost_function(g_xx=g_xx, g_xu=g_xu, g_ux=g_ux, g_uu=g_uu, g_x=g_x, g_u=g_u)
 
         dt = 0.1
 
@@ -32,7 +34,7 @@ class TestILQR(unittest.TestCase):
 
     def test_ilqr(self):
 
-        states_initial = torch.tensor([[5.0], [0.0], [math.pi/4], [0.0]], dtype=torch.float64)
+        states_initial = torch.tensor([[5.0], [0.0], [math.pi/4], [0.0]])
         time_total = 40
         xs, us = self.solver.solve(states_initial, time_total)
 

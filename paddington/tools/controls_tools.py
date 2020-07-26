@@ -22,7 +22,7 @@ class cost_function():
 
 class quadratic_cost_function(cost_function):
 
-    def __init__(self, g_xx, g_xu, g_uu, g_x, g_u):
+    def __init__(self, g_xx, g_xu, g_ux, g_uu, g_x, g_u):
 
         if g_xx.shape[0] != g_xx.shape[1]:
             raise ValueError('g_xx must have shape (N_x, N_x)')
@@ -30,6 +30,8 @@ class quadratic_cost_function(cost_function):
             raise ValueError('g_uu must have  shape (N_u, N_u)')
         if g_xu.shape != (g_xx.shape[0], g_uu.shape[0]):
             raise ValueError('g_xu must have  shape (N_x, N_u)')
+        if g_ux.shape != (g_uu.shape[0], g_xx.shape[0]):
+            raise ValueError('g_ux must have  shape (N_u, N_x)')
         if g_x.shape != (1, g_xx.shape[0]):
             raise ValueError('g_x must have  shape (N_x, 1)')
         if g_u.shape != (1, g_uu.shape[0]):
@@ -37,6 +39,7 @@ class quadratic_cost_function(cost_function):
 
         self.g_xx = g_xx
         self.g_xu = g_xu
+        self.g_ux = g_ux
         self.g_uu = g_uu
         self.g_x = g_x
         self.g_u = g_u
@@ -61,7 +64,7 @@ class quadratic_cost_function(cost_function):
         return self.g_xu
 
     def calculate_g_ux(self, x, u):
-        return self.calculate_g_xu(x, u).T
+        return self.g_ux
 
     def calculate_g_uu(self, x, u):
         return self.g_uu

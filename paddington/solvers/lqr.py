@@ -3,7 +3,7 @@ import torch
 
 class LQR:
 
-    def __init__(self, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu, dt):
+    def __init__(self, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu, g_ux, dt):
 
         # LTI
         self.T_x = T_x
@@ -13,6 +13,7 @@ class LQR:
         self.g_xx = g_xx
         self.g_uu = g_uu
         self.g_xu = g_xu
+        self.g_ux = g_ux
         self.dt = dt
 
         N_x = T_x.shape[0]
@@ -26,6 +27,8 @@ class LQR:
             raise ValueError('g_xx must have shape (N_x, N_x)')
         if g_xu.shape != (N_x, N_u):
             raise ValueError('g_xu must have  shape (N_x, N_u)')
+        if g_ux.shape != (N_u, N_x):
+            raise ValueError('g_ux must have  shape (N_u, N_x)')
         if g_uu.shape != (N_u, N_u):
             raise ValueError('g_uu must have  shape (N_u, N_u)')
         if g_x.shape != (1, N_x):
@@ -35,8 +38,8 @@ class LQR:
 
         # Initialisation
         self.R_x, self.R_xx, _, _ = self._backward_pass(
-            R_xx=torch.zeros_like(g_xx, dtype=torch.float64),
-            R_x=torch.zeros_like(g_x, dtype=torch.float64)
+            R_xx=torch.zeros_like(g_xx),
+            R_x=torch.zeros_like(g_x)
         )
 
     @staticmethod
@@ -48,13 +51,13 @@ class LQR:
         return x_new, u
 
     @staticmethod
-    def calculate_Q_partials(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu):
+    def calculate_Q_partials(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu, g_ux):
 
         # Q Value
         Q_xx = g_xx + torch.matmul(T_x.T, torch.matmul(R_xx, T_x))
         Q_uu = g_uu + torch.matmul(T_u.T, torch.matmul(R_xx, T_u))
         Q_xu = g_xu + torch.matmul(T_x.T, torch.matmul(R_xx, T_u))
-        Q_ux = Q_xu.T
+        Q_ux = g_ux + torch.matmul(T_u.T, torch.matmul(R_xx, T_x))
         Q_x = g_x + torch.matmul(R_x, T_x)
         Q_u = torch.matmul(R_x, T_u)
 
@@ -68,21 +71,21 @@ class LQR:
         return beta, alpha
 
     @staticmethod
-    def backward_pass(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu):
+    def backward_pass(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu, g_ux):
 
-        Q_xx, Q_uu, Q_xu, Q_ux, Q_x, Q_u = LQR.calculate_Q_partials(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu)
+        Q_xx, Q_uu, Q_xu, Q_ux, Q_x, Q_u = LQR.calculate_Q_partials(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu, g_ux)
         beta, alpha = LQR.calculate_control_gains(Q_ux, Q_uu, Q_u)
 
         # Return function constants
         R_xx = Q_xx + torch.matmul(Q_xu, beta) + torch.matmul(beta.T, Q_ux) + torch.matmul(beta.T, torch.matmul(Q_uu, beta))
-        R_x = Q_x + torch.matmul(Q_u, beta) + torch.matmul(Q_xu, alpha).T + torch.matmul(alpha.T, torch.matmul(Q_uu, beta))
+        R_x = Q_x + torch.matmul(beta.T, Q_u).T + torch.matmul(Q_xu, alpha).T + torch.matmul(beta.T, torch.matmul(Q_uu, alpha)).T
 
         assert(R_x.shape[0] == 1)  # TODO: Replace with unittest
 
         return R_x, R_xx, beta, alpha
 
     def _backward_pass(self, R_x, R_xx):
-        return LQR.backward_pass(R_x=R_x, R_xx=R_xx, T_x=self.T_x, T_u=self.T_u, g_x=self.g_x, g_u=self.g_u, g_xx=self.g_xx, g_uu=self.g_uu, g_xu=self.g_xu)
+        return LQR.backward_pass(R_x=R_x, R_xx=R_xx, T_x=self.T_x, T_u=self.T_u, g_x=self.g_x, g_u=self.g_u, g_xx=self.g_xx, g_uu=self.g_uu, g_xu=self.g_xu, g_ux=self.g_ux)
 
     def K_horizon(self, N_Steps):
 
@@ -97,6 +100,7 @@ class LQR:
 
         betas = []
         alphas = []
+
         R_xx, R_x = self.R_xx, self.R_x
 
         for t in torch.arange(time_total, 0, -self.dt):
