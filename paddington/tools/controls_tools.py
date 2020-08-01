@@ -1,8 +1,9 @@
-import torch
+import jax
+import jax.numpy as np
 
 
 def continuous_to_discrete(A, B, dt):
-    Ad = torch.eye(len(A)) + dt * A
+    Ad = np.eye(len(A)) + dt * A
     Bd = dt * B
     return Ad, Bd
 
@@ -13,11 +14,11 @@ class cost_function():
         pass
 
     def calculate_cost_hessian(self, x, u):
-        return torch.autograd.functional.hessian(self.calculate_cost, (x, u))
+        return jax.hessian(self.calculate_cost, (x, u))
 
     def calculate_cost_jacobian(self, x, u):
         # For quadratic cost function, hessian is just the matrix
-        return torch.autograd.functional.jacobian(self.calculate_cost, (x, u))
+        return jax.jacfwd(self.calculate_cost, (x, u))
 
 
 class quadratic_cost_function(cost_function):
@@ -44,46 +45,30 @@ class quadratic_cost_function(cost_function):
         self.g_x = g_x
         self.g_u = g_u
 
+        self.calculate_g_u = jax.jit(self._calculate_g_u)
+        self.calculate_g_x = jax.jit(self._calculate_g_x)
+        self.calculate_g_u_batch = jax.vmap(self.calculate_g_u, in_axes=(1, 0))
+        self.calculate_g_x_batch = jax.vmap(self.calculate_g_x, in_axes=(1, 0))
+
     def calculate_quadratic_cost(self, x, u):
 
-        return (torch.matmul(x.T, torch.matmul(self.g_xx, x)) +
-                2 * torch.matmul(x.T, torch.matmul(self.g_xu, u)) +
-                torch.matmul(u.T, torch.matmul(self.g_uu, u))) / 2
+        return (np.matmul(x.T, np.matmul(self.g_xx, x)) +
+                2 * np.matmul(x.T, np.matmul(self.g_xu, u)) +
+                np.matmul(u.T, np.matmul(self.g_uu, u))) / 2
 
     def calculate_linear_cost(self, x, u):
-
-        return torch.matmul(self.g_x, x) + torch.matmul(self.g_u, u)
+        return np.matmul(self.g_x, x) + np.matmul(self.g_u, u)
 
     def calculate_cost(self, x, u):
         return self.calculate_quadratic_cost(x, u) + self.calculate_linear_cost(x, u)
 
-    def calculate_g_xx(self, x, u):
-        return self.g_xx
+    def _calculate_g_x(self, x, u):
+        return np.matmul(self.g_xx, x).T + np.matmul(u.T, self.g_ux) + self.g_x
 
-    def calculate_g_xu(self, x, u):
-        return self.g_xu
-
-    def calculate_g_ux(self, x, u):
-        return self.g_ux
-
-    def calculate_g_uu(self, x, u):
-        return self.g_uu
-
-    def calculate_g_x(self, x, u):
-
-        g_xx = self.calculate_g_xx(x, u)
-        g_ux = self.calculate_g_ux(x, u)
-
-        return torch.matmul(g_xx, x).T + torch.matmul(u.T, g_ux) + self.g_x
-
-    def calculate_g_u(self, x, u):
-
-        g_ux = self.calculate_g_ux(x, u)
-        g_uu = self.calculate_g_uu(x, u)
-
-        return torch.matmul(g_ux, x) + torch.matmul(g_uu, u) + self.g_u
+    def _calculate_g_u(self, x, u):
+        return np.matmul(self.g_ux, x) + np.matmul(self.g_uu, u) + self.g_u
 
 
 def diagonalize(diagonal):
 
-    return torch.eye(len(diagonal)) * diagonal
+    return np.eye(len(diagonal)) * diagonal

@@ -1,4 +1,4 @@
-import torch
+import jax.numpy as np
 
 from paddington.plants.nonlinear_model import NonLinearModel
 
@@ -12,12 +12,15 @@ class CartPole(NonLinearModel):
     # u = force
     # States = position, velocity, angular_position, angular_velocity
 
-    def __init__(self):
+    def __init__(self, dt):
+
         self.mass_pendulum = 5
         self.mass_cart = 20
         self.length = 1
         self.gravity = 9.81
         self.angular_friction = 0.1
+
+        super().__init__(dt)
 
     @property
     def N_x(self):
@@ -38,8 +41,8 @@ class CartPole(NonLinearModel):
         velocity = x[1]
         force = u[0]
 
-        angular_position_sin = torch.sin(angular_position)
-        angular_position_cos = torch.cos(angular_position)
+        angular_position_sin = np.sin(angular_position)
+        angular_position_cos = np.cos(angular_position)
 
         angular_acceleration = (
             self.gravity * angular_position_sin + angular_position_cos * (
@@ -64,4 +67,4 @@ class CartPole(NonLinearModel):
             angular_acceleration
         )
 
-        return torch.stack(derivatives)
+        return np.stack(derivatives)

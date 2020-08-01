@@ -1,4 +1,5 @@
-import torch
+import jax
+import jax.numpy as np
 
 
 class LQR:
@@ -38,47 +39,52 @@ class LQR:
 
         # Initialisation
         self.R_x, self.R_xx, _, _ = self._backward_pass(
-            R_xx=torch.zeros_like(g_xx),
-            R_x=torch.zeros_like(g_x)
+            R_xx=np.zeros_like(g_xx),
+            R_x=np.zeros_like(g_x)
         )
 
     @staticmethod
+    @jax.jit
     def step(x, beta, alpha, T_x, T_u):
 
-        u = torch.matmul(beta, x) + alpha
-        x_new = torch.matmul(T_x, x) + torch.matmul(T_u, u)
+        u = np.dot(beta, x) + alpha
+        x_new = np.matmul(T_x, x) + np.matmul(T_u, u)
 
         return x_new, u
 
     @staticmethod
+    @jax.jit
     def calculate_Q_partials(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu, g_ux):
 
         # Q Value
-        Q_xx = g_xx + torch.matmul(T_x.T, torch.matmul(R_xx, T_x))
-        Q_uu = g_uu + torch.matmul(T_u.T, torch.matmul(R_xx, T_u))
-        Q_xu = g_xu + torch.matmul(T_x.T, torch.matmul(R_xx, T_u))
-        Q_ux = g_ux + torch.matmul(T_u.T, torch.matmul(R_xx, T_x))
-        Q_x = g_x + torch.matmul(R_x, T_x)
-        Q_u = torch.matmul(R_x, T_u)
+        Q_xx = g_xx + np.matmul(T_x.T, np.matmul(R_xx, T_x))
+        Q_uu = g_uu + np.matmul(T_u.T, np.matmul(R_xx, T_u))
+        Q_xu = g_xu + np.matmul(T_x.T, np.matmul(R_xx, T_u))
+        Q_ux = g_ux + np.matmul(T_u.T, np.matmul(R_xx, T_x))
+        Q_x = g_x + np.matmul(R_x, T_x)
+        Q_u = np.matmul(R_x, T_u)
 
         return Q_xx, Q_uu, Q_xu, Q_ux, Q_x, Q_u
 
+    @staticmethod
+    @jax.jit
     def calculate_control_gains(Q_ux, Q_uu, Q_u):
 
-        beta, _ = torch.solve(Q_ux, -Q_uu)
-        alpha, _ = torch.solve(Q_u, -Q_uu)
+        beta = np.linalg.solve(-Q_uu, Q_ux)
+        alpha = np.linalg.solve(-Q_uu, Q_u)
 
         return beta, alpha
 
     @staticmethod
+    @jax.jit
     def backward_pass(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu, g_ux):
 
         Q_xx, Q_uu, Q_xu, Q_ux, Q_x, Q_u = LQR.calculate_Q_partials(R_x, R_xx, T_x, T_u, g_x, g_u, g_xx, g_uu, g_xu, g_ux)
         beta, alpha = LQR.calculate_control_gains(Q_ux, Q_uu, Q_u)
 
         # Return function constants
-        R_xx = Q_xx + torch.matmul(Q_xu, beta) + torch.matmul(beta.T, Q_ux) + torch.matmul(beta.T, torch.matmul(Q_uu, beta))
-        R_x = Q_x + torch.matmul(Q_u, beta) + torch.matmul(Q_xu, alpha).T + torch.matmul(alpha.T, torch.matmul(Q_uu, beta))
+        R_xx = Q_xx + np.matmul(Q_xu, beta) + np.matmul(beta.T, Q_ux) + np.matmul(beta.T, np.matmul(Q_uu, beta))
+        R_x = Q_x + np.matmul(Q_u, beta) + np.matmul(Q_xu, alpha).T + np.matmul(alpha.T, np.matmul(Q_uu, beta))
 
         assert(R_x.shape[0] == 1)  # TODO: Replace with unittest
 
@@ -103,14 +109,14 @@ class LQR:
 
         R_xx, R_x = self.R_xx, self.R_x
 
-        for t in torch.arange(time_total, 0, -self.dt):
+        for t in np.arange(time_total, 0, -self.dt):
             R_x, R_xx, beta, alpha = self._backward_pass(R_x=R_x, R_xx=R_xx)
             betas.append(beta)
             alphas.append(alpha)
 
         xs = []
         us = []
-        ts = torch.arange(0, time_total, self.dt)
+        ts = np.arange(0, time_total, self.dt)
 
         x = states_initial
 
