@@ -11,7 +11,7 @@ class NonLinearModel():
         self._derivatives = jax.jit(self.derivatives)
         self.step = jax.jit(self._step)
         self.calculate_statespace_discrete = jax.jacfwd(self.step, [0, 1])
-        self.calculate_statespace_discrete_batch = jax.vmap(self.calculate_statespace_discrete, in_axes=(1, 0))
+        self.calculate_statespace_discrete_batch = jax.vmap(self.calculate_statespace_discrete, in_axes=(0, 0))
 
     # @ property
     # def N_x(self):

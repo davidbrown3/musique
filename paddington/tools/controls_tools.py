@@ -47,8 +47,8 @@ class quadratic_cost_function(cost_function):
 
         self.calculate_g_u = jax.jit(self._calculate_g_u)
         self.calculate_g_x = jax.jit(self._calculate_g_x)
-        self.calculate_g_u_batch = jax.vmap(self.calculate_g_u, in_axes=(1, 0))
-        self.calculate_g_x_batch = jax.vmap(self.calculate_g_x, in_axes=(1, 0))
+        self.calculate_g_u_batch = jax.vmap(self.calculate_g_u, in_axes=(0, 0))
+        self.calculate_g_x_batch = jax.vmap(self.calculate_g_x, in_axes=(0, 0))
 
     def calculate_quadratic_cost(self, x, u):
 

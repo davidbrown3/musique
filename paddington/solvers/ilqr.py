@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as np
 
 from paddington.solvers.lqr import LQR
@@ -9,6 +10,9 @@ class iLQR:
 
         self.plant = plant
         self.cost_function = cost_function
+        self._forward_pass_inner = jax.jit(self.forward_pass_inner)
+        self._forward_pass = jax.jit(self.forward_pass)
+        self._backward_pass = jax.jit(self.backward_pass)
 
     def initial_guess_lqr(self, states_initial, time_total):
 
@@ -31,80 +35,97 @@ class iLQR:
 
         ts, x_bars, u_bars = self.initial_guess_lqr(states_initial=states_initial, time_total=time_total)
 
-        cost_prev = np.sum(np.concatenate(
-            [self.cost_function.calculate_cost(x, u) for x, u in zip(x_bars, u_bars)]
-        ))
+        xs = np.concatenate(x_bars, 1).T
+        us = np.concatenate(u_bars, 1).T
 
-        print(cost_prev)
+        # cost_prev = np.sum(np.concatenate(
+        #     [self.cost_function.calculate_cost(x, u) for x, u in zip(x_bars, u_bars)]
+        # ))
 
-        # Setting up while loops
-        cost = cost_prev
-        cost_prev = cost * 2.0
+        # print(cost_prev)
+
+        # # Setting up while loops
+        # cost = cost_prev
+        # cost_prev = cost * 2.0
         # while (np.abs((cost - cost_prev)) / cost) > convergence:
-        for _ in range(10):
+        for _ in range(20):
 
-            cost_prev = cost
-            betas, alphas = self.backward_pass(xs=x_bars, us=u_bars)
-            x_bars, u_bars = self.forward_pass(x_bars=x_bars, u_bars=u_bars, betas=betas, alphas=alphas)
+            # cost_prev = cost
+            betas, alphas = self._backward_pass(xs=xs, us=us)
+            xs, us = self._forward_pass(xs=xs, us=us, betas=betas, alphas=alphas)
 
             # cost = np.sum(np.concatenate(
             #     [self.cost_function.calculate_cost(x, u) for x, u in zip(x_bars, u_bars)]
             # ))
             # print(cost)
 
-        return x_bars, u_bars
+        return xs, us
 
     def backward_pass(self, xs, us):
 
-        _xs = np.concatenate(xs[::-1], 1)
-        _us = np.concatenate(us[::-1], 0)
-        # Might have to handle special case where len(u)==1
-        T_xs, T_us = self.plant.calculate_statespace_discrete_batch(_xs, _us)
-        g_xs = self.cost_function.calculate_g_u_batch(_xs, _us)
-        g_us = self.cost_function.calculate_g_u_batch(_xs, _us)
+        xs = np.flip(xs, axis=0)
+        us = np.flip(us, axis=0)
 
-        R_xx = np.zeros([self.plant.N_x, self.plant.N_x])
-        R_x = np.zeros([1, self.plant.N_x])
-
-        betas = []
-        alphas = []
+        T_xs, T_us = self.plant.calculate_statespace_discrete_batch(xs, us)
+        g_xs = self.cost_function.calculate_g_x_batch(xs, us)
+        g_us = self.cost_function.calculate_g_u_batch(xs, us)
 
         g_xx = self.cost_function.g_xx
         g_uu = self.cost_function.g_uu
         g_xu = self.cost_function.g_xu
         g_ux = self.cost_function.g_ux
 
-        for x, u, T_x, T_u, g_x, g_u in zip(xs[::-1], us[::-1], T_xs, T_us, g_xs, g_us):
+        R_xx = g_xx * 0.0
+        R_x = g_xs[0] * 0.0
 
-            # Faster to do a 2nd diff on statespace than calculate hessian fresh
+        betas = np.empty([xs.shape[0], us.shape[1], xs.shape[1]])
+        alphas = np.empty([us.shape[0], us.shape[1]])
 
-            R_x, R_xx, beta, alpha = LQR.backward_pass(R_x=R_x,
-                                                       R_xx=R_xx,
-                                                       T_x=T_x,
-                                                       T_u=T_u,
-                                                       g_x=g_x,
-                                                       g_u=g_u,
-                                                       g_xx=g_xx,
-                                                       g_uu=g_uu,
-                                                       g_xu=g_xu,
-                                                       g_ux=g_ux)
+        data = (R_x, R_xx, T_xs, T_us, g_xs, g_us, g_xx, g_uu, g_xu, g_ux, betas, alphas)
+        data = jax.lax.fori_loop(0, xs.shape[0], iLQR.backward_pass_inner, data)
 
-            betas.append(beta)
-            alphas.append(alpha)
+        return np.flip(data[-2], axis=0), np.flip(data[-1], axis=0)
 
-        return betas[::-1], alphas[::-1]
+    @staticmethod
+    @jax.jit
+    def backward_pass_inner(i, data):
 
-    def forward_pass(self, x_bars, u_bars, betas, alphas, line_alpha=0.1):
+        R_x, R_xx, T_xs, T_us, g_xs, g_us, g_xx, g_uu, g_xu, g_ux, betas, alphas = data
 
-        x = x_bars[0]
-        xs = []
-        us = []
-        for x_bar, u_bar, beta, alpha in zip(x_bars, u_bars, betas, alphas):
-            xs.append(x)
-            dx = x - x_bar
-            du = np.dot(beta, dx) + line_alpha * alpha
-            u = u_bar + du
-            x = self.plant.step(x, u)
-            us.append(u)
+        R_x, R_xx, beta, alpha = LQR.backward_pass(R_x=R_x,
+                                                   R_xx=R_xx,
+                                                   T_x=T_xs[jax.ops.index[i, :, :]],
+                                                   T_u=T_us[jax.ops.index[i, :, :]],
+                                                   g_x=g_xs[jax.ops.index[i, :]],
+                                                   g_u=g_us[jax.ops.index[i, :]],
+                                                   g_xx=g_xx,
+                                                   g_uu=g_uu,
+                                                   g_xu=g_xu,
+                                                   g_ux=g_ux)
 
-        return xs, us
+        betas = jax.ops.index_update(betas, jax.ops.index[i, :], beta)
+        alphas = jax.ops.index_update(alphas, jax.ops.index[i, :], alpha.squeeze())
+
+        return (R_x, R_xx, T_xs, T_us, g_xs, g_us, g_xx, g_uu, g_xu, g_ux, betas, alphas)
+
+    def forward_pass(self, xs, us, betas, alphas, line_alpha=0.1):
+
+        x_ = xs[0, :]
+
+        data = (xs, us, betas, alphas, x_, line_alpha)
+        data = jax.lax.fori_loop(0, xs.shape[0], self._forward_pass_inner, data)
+
+        return data[0], data[1]
+
+    def forward_pass_inner(self, i, data):
+
+        xs, us, betas, alphas, x_, line_alpha = data
+
+        dx = x_ - xs[i]
+        xs = jax.ops.index_update(xs, jax.ops.index[i, :], x_)
+        du = np.dot(betas[i], dx) + line_alpha * alphas[i]
+        u_ = us[i] + du
+        us = jax.ops.index_update(us, jax.ops.index[i, :], u_.squeeze())
+        x_ = self.plant.step(x_, u_)
+
+        return (xs, us, betas, alphas, x_, line_alpha)

@@ -31,21 +31,21 @@ fig = go.Figure()
 
 fig.add_trace(
     go.Scatter(
-        y=[x[2, 0] for x in xs],
+        y=xs[:, 2],
         name='angular position'
     )
 )
 
 fig.add_trace(
     go.Scatter(
-        y=[x[0, 0] for x in xs],
+        y=xs[:, 0],
         name='linear position'
     )
 )
 
 fig.add_trace(
     go.Scatter(
-        y=[u[0, 0] for u in us],
+        y=us[:, 0],
         name='control'
     )
 )
