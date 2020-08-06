@@ -10,10 +10,10 @@ from paddington.examples.models.nonlinear.cart_pole import CartPole
 @genty
 class TestNaNs(unittest.TestCase):
 
-    angular_positions = np.logspace(0, 4, num=5)
-    angular_velocitys = np.logspace(0, 4, num=5)
-    velocitys = np.logspace(0, 4, num=5)
-    forces = np.logspace(0, 4, num=5)
+    angular_positions = np.logspace(0, 7, num=5)
+    angular_velocitys = np.logspace(0, 7, num=5)
+    velocitys = np.logspace(0, 7, num=5)
+    forces = np.logspace(0, 7, num=5)
 
     Case = namedtuple('Case', 'angular_position angular_velocity velocity force')
 
@@ -35,8 +35,12 @@ class TestNaNs(unittest.TestCase):
         position = 0.0
         x = np.array([[position], [velocity], [angular_position], [angular_velocity]])
         u = np.array([[force]])
-        xd = self.plant.derivatives(x, u)
+
+        xd = self.plant._derivatives(x, u)
         self.assertFalse(np.any(np.isnan(xd)))
+
+        xnew = self.plant.step(x, u)
+        self.assertFalse(np.any(np.isnan(xnew)))
 
 
 if __name__ == "__main__":

@@ -48,18 +48,16 @@ class iLQR:
         # cost = cost_prev
         # cost_prev = cost * 2.0
         # while (np.abs((cost - cost_prev)) / cost) > convergence:
-        for _ in range(20):
+        costs = []
+        for _ in range(50):
 
             # cost_prev = cost
             betas, alphas = self._backward_pass(xs=xs, us=us)
             xs, us = self._forward_pass(xs=xs, us=us, betas=betas, alphas=alphas)
+            cost = np.sum(self.cost_function.calculate_cost_batch(xs, us))
+            costs.append(cost)
 
-            # cost = np.sum(np.concatenate(
-            #     [self.cost_function.calculate_cost(x, u) for x, u in zip(x_bars, u_bars)]
-            # ))
-            # print(cost)
-
-        return xs, us
+        return xs, us, costs
 
     def backward_pass(self, xs, us):
 
@@ -86,8 +84,8 @@ class iLQR:
 
         return np.flip(data[-2], axis=0), np.flip(data[-1], axis=0)
 
-    @staticmethod
-    @jax.jit
+    @ staticmethod
+    @ jax.jit
     def backward_pass_inner(i, data):
 
         R_x, R_xx, T_xs, T_us, g_xs, g_us, g_xx, g_uu, g_xu, g_ux, betas, alphas = data
@@ -111,7 +109,6 @@ class iLQR:
     def forward_pass(self, xs, us, betas, alphas, line_alpha=0.1):
 
         x_ = xs[0, :]
-
         data = (xs, us, betas, alphas, x_, line_alpha)
         data = jax.lax.fori_loop(0, xs.shape[0], self._forward_pass_inner, data)
 
@@ -120,12 +117,11 @@ class iLQR:
     def forward_pass_inner(self, i, data):
 
         xs, us, betas, alphas, x_, line_alpha = data
-
         dx = x_ - xs[i]
         xs = jax.ops.index_update(xs, jax.ops.index[i, :], x_)
-        du = np.dot(betas[i], dx) + line_alpha * alphas[i]
+        du = np.matmul(betas[i], dx) + line_alpha * alphas[i]
         u_ = us[i] + du
-        us = jax.ops.index_update(us, jax.ops.index[i, :], u_.squeeze())
+        us = jax.ops.index_update(us, jax.ops.index[i, :], u_)
         x_ = self.plant.step(x_, u_)
 
         return (xs, us, betas, alphas, x_, line_alpha)

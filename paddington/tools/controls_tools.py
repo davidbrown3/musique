@@ -47,19 +47,23 @@ class quadratic_cost_function(cost_function):
 
         self.calculate_g_u = jax.jit(self._calculate_g_u)
         self.calculate_g_x = jax.jit(self._calculate_g_x)
+        self.calculate_quadratic_cost = jax.jit(self._calculate_quadratic_cost)
+        self.calculate_linear_cost = jax.jit(self._calculate_linear_cost)
+        self.calculate_cost = jax.jit(self._calculate_cost)
         self.calculate_g_u_batch = jax.vmap(self.calculate_g_u, in_axes=(0, 0))
         self.calculate_g_x_batch = jax.vmap(self.calculate_g_x, in_axes=(0, 0))
+        self.calculate_cost_batch = jax.vmap(self.calculate_cost, in_axes=(0, 0))
 
-    def calculate_quadratic_cost(self, x, u):
+    def _calculate_quadratic_cost(self, x, u):
 
         return (np.matmul(x.T, np.matmul(self.g_xx, x)) +
                 2 * np.matmul(x.T, np.matmul(self.g_xu, u)) +
                 np.matmul(u.T, np.matmul(self.g_uu, u))) / 2
 
-    def calculate_linear_cost(self, x, u):
+    def _calculate_linear_cost(self, x, u):
         return np.matmul(self.g_x, x) + np.matmul(self.g_u, u)
 
-    def calculate_cost(self, x, u):
+    def _calculate_cost(self, x, u):
         return self.calculate_quadratic_cost(x, u) + self.calculate_linear_cost(x, u)
 
     def _calculate_g_x(self, x, u):
