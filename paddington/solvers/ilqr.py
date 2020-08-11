@@ -29,31 +29,26 @@ class iLQR:
                   g_ux=self.cost_function.g_ux,
                   dt=self.plant.dt)
 
-        return lqr.solve(states_initial, time_total)
+        return lqr.K_horizon(500)
 
     def solve(self, states_initial, time_total, convergence=1e-4):
 
-        ts, x_bars, u_bars = self.initial_guess_lqr(states_initial=states_initial, time_total=time_total)
+        beta, alpha = self.initial_guess_lqr(states_initial=states_initial, time_total=time_total)
 
-        xs = np.concatenate(x_bars, 1).T
-        us = np.concatenate(u_bars, 1).T
+        N_steps = int(time_total / self.plant.dt)
+        xs = np.zeros([N_steps, self.plant.N_x])
+        us = np.zeros([N_steps, self.plant.N_u])
+        betas = np.tile(beta, (N_steps, 1, 1))
+        alphas = np.zeros([N_steps, self.plant.N_u])
 
-        # cost_prev = np.sum(np.concatenate(
-        #     [self.cost_function.calculate_cost(x, u) for x, u in zip(x_bars, u_bars)]
-        # ))
+        xs, us = self.forward_pass(np.squeeze(states_initial), xs, us, betas, alphas)
 
-        # print(cost_prev)
-
-        # # Setting up while loops
-        # cost = cost_prev
-        # cost_prev = cost * 2.0
-        # while (np.abs((cost - cost_prev)) / cost) > convergence:
         costs = []
-        for _ in range(50):
+        for _ in range(150):
 
             # cost_prev = cost
             betas, alphas = self._backward_pass(xs=xs, us=us)
-            xs, us = self._forward_pass(xs=xs, us=us, betas=betas, alphas=alphas)
+            xs, us = self._forward_pass(xi=np.squeeze(states_initial), xs=xs, us=us, betas=betas, alphas=alphas)
             cost = np.sum(self.cost_function.calculate_cost_batch(xs, us))
             costs.append(cost)
 
@@ -73,8 +68,8 @@ class iLQR:
         g_xu = self.cost_function.g_xu
         g_ux = self.cost_function.g_ux
 
-        R_xx = g_xx * 0.0
-        R_x = g_xs[0] * 0.0
+        R_xx = np.zeros_like(g_xx)
+        R_x = np.zeros_like(g_xs[0])
 
         betas = np.empty([xs.shape[0], us.shape[1], xs.shape[1]])
         alphas = np.empty([us.shape[0], us.shape[1]])
@@ -106,9 +101,9 @@ class iLQR:
 
         return (R_x, R_xx, T_xs, T_us, g_xs, g_us, g_xx, g_uu, g_xu, g_ux, betas, alphas)
 
-    def forward_pass(self, xs, us, betas, alphas, line_alpha=0.1):
+    def forward_pass(self, xi, xs, us, betas, alphas, line_alpha=0.01):
 
-        x_ = xs[0, :]
+        x_ = xi
         data = (xs, us, betas, alphas, x_, line_alpha)
         data = jax.lax.fori_loop(0, xs.shape[0], self._forward_pass_inner, data)
 
