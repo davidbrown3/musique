@@ -6,10 +6,11 @@ from paddington.solvers.lqr import LQR
 
 class iLQR:
 
-    def __init__(self, plant, cost_function):
+    def __init__(self, plant, running_cost_function, terminal_cost_function):
 
         self.plant = plant
-        self.cost_function = cost_function
+        self.running_cost_function = running_cost_function
+        self.terminal_cost_function = terminal_cost_function
         self._forward_pass_inner = jax.jit(self.forward_pass_inner)
         self._forward_pass = jax.jit(self.forward_pass)
         self._backward_pass = jax.jit(self.backward_pass)
@@ -21,12 +22,12 @@ class iLQR:
 
         lqr = LQR(T_x=A_d,
                   T_u=B_d,
-                  g_x=self.cost_function.calculate_g_x(x=states_initial, u=controls_initial),
-                  g_u=self.cost_function.calculate_g_u(x=states_initial, u=controls_initial),
-                  g_xx=self.cost_function.g_xx,
-                  g_uu=self.cost_function.g_uu,
-                  g_xu=self.cost_function.g_xu,
-                  g_ux=self.cost_function.g_ux,
+                  g_x=self.running_cost_function.calculate_g_x(x=states_initial, u=controls_initial),
+                  g_u=self.running_cost_function.calculate_g_u(x=states_initial, u=controls_initial),
+                  g_xx=self.running_cost_function.g_xx,
+                  g_uu=self.running_cost_function.g_uu,
+                  g_xu=self.running_cost_function.g_xu,
+                  g_ux=self.running_cost_function.g_ux,
                   dt=self.plant.dt)
 
         return lqr.K_horizon(500)
@@ -44,12 +45,13 @@ class iLQR:
         xs, us = self.forward_pass(np.squeeze(states_initial), xs, us, betas, alphas)
 
         costs = []
-        for _ in range(150):
+        for _ in range(300):
 
             # cost_prev = cost
             betas, alphas = self._backward_pass(xs=xs, us=us)
             xs, us = self._forward_pass(xi=np.squeeze(states_initial), xs=xs, us=us, betas=betas, alphas=alphas)
-            cost = np.sum(self.cost_function.calculate_cost_batch(xs, us))
+            cost = np.sum(self.running_cost_function.calculate_cost_batch(xs, us)) + \
+                np.sum(self.terminal_cost_function.calculate_cost(xs[-1], us[-1]))
             costs.append(cost)
 
         return xs, us, costs
@@ -60,16 +62,16 @@ class iLQR:
         us = np.flip(us, axis=0)
 
         T_xs, T_us = self.plant.calculate_statespace_discrete_batch(xs, us)
-        g_xs = self.cost_function.calculate_g_x_batch(xs, us)
-        g_us = self.cost_function.calculate_g_u_batch(xs, us)
+        g_xs = self.running_cost_function.calculate_g_x_batch(xs, us)
+        g_us = self.running_cost_function.calculate_g_u_batch(xs, us)
 
-        g_xx = self.cost_function.g_xx
-        g_uu = self.cost_function.g_uu
-        g_xu = self.cost_function.g_xu
-        g_ux = self.cost_function.g_ux
+        g_xx = self.running_cost_function.g_xx
+        g_uu = self.running_cost_function.g_uu
+        g_xu = self.running_cost_function.g_xu
+        g_ux = self.running_cost_function.g_ux
 
-        R_xx = np.zeros_like(g_xx)
-        R_x = np.zeros_like(g_xs[0])
+        R_xx = self.terminal_cost_function.g_xx
+        R_x = self.terminal_cost_function.calculate_g_x(xs[0], us[0])
 
         betas = np.empty([xs.shape[0], us.shape[1], xs.shape[1]])
         alphas = np.empty([us.shape[0], us.shape[1]])
