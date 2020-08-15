@@ -222,7 +222,7 @@ class iLQR:
             g_ux=self.running_cost_function.g_ux
         )
 
-        Q_xx_2nd, Q_uu_2nd, Q_xu_2nd, Q_ux_2nd = self._calculate_Q_partials_1st(
+        Q_xx_2nd, Q_uu_2nd, Q_xu_2nd, Q_ux_2nd = self._calculate_Q_partials_2nd(
             R_x=R_x,
             T_xx=T_xxs[jax.ops.index[i, :, :, :]],
             T_xu=T_xus[jax.ops.index[i, :, :, :]],
