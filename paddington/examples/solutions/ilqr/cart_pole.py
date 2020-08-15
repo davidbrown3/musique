@@ -18,7 +18,7 @@ g_x = np.array([[0.0, 0.0, 0.0, 0.0]])
 g_u = np.array([[0.0]])
 running_cost_function = quadratic_cost_function(g_xx=g_xx, g_xu=g_xu, g_ux=g_ux, g_uu=g_uu, g_x=g_x, g_u=g_u)
 
-g_xx = diagonalize(np.array([1.0, 0.0, 1.0, 0.0]))
+g_xx = diagonalize(np.array([1.0, 0.0, 1.0, 1.0]))
 g_uu = np.array([[0.0]])
 g_xu = np.zeros([4, 1])
 g_ux = np.zeros([1, 4])

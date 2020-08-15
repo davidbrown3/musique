@@ -1,38 +1,37 @@
-import math
 import unittest
 from collections import namedtuple
 
-import torch
+import jax.numpy as np
 from genty import genty, genty_dataset
 
-from paddington.examples.models.nonlinear.inverted_pendulum import \
-    InvertedPendulum
+from paddington.examples.models.nonlinear.cart_pole import \
+    CartPole
 
 
 @genty
 class TestPendulum(unittest.TestCase):
 
     states_0s = [
-        torch.tensor([0.0, 0.0, 0.0, 0.0], requires_grad=True),
-        torch.tensor([0.0, 0.0, math.pi/4, 0.0], requires_grad=True)
+        np.array([0.0, 0.0, 0.0, 0.0]),
+        np.array([0.0, 0.0, np.pi/4, 0.0])
     ]
 
     controls_0s = [
-        torch.tensor([0.0], requires_grad=True),
-        torch.tensor([1.0], requires_grad=True)
+        np.array([0.0]),
+        np.array([1.0])
     ]
 
     states_deltas = [
-        torch.tensor([0.0, 0.0, 0.0, 0.0]),
-        torch.tensor([0.0, 0.0, 1e-3, 0.0]),
-        torch.tensor([0.0, 0.0, 0.0, 1e-3]),
-        torch.tensor([0.0, 0.0, 1e-3, 1e-3]),
+        np.array([0.0, 0.0, 0.0, 0.0]),
+        np.array([0.0, 0.0, 1e-3, 0.0]),
+        np.array([0.0, 0.0, 0.0, 1e-3]),
+        np.array([0.0, 0.0, 1e-3, 1e-3]),
     ]
 
     controls_deltas = [
-        torch.tensor([0.0]),
-        torch.tensor([1e-3]),
-        torch.tensor([1.0]),
+        np.array([0.0]),
+        np.array([1e-3]),
+        np.array([1.0]),
     ]
 
     Case = namedtuple('Case', 'states_0 controls_0 states_delta controls_delta')
@@ -45,7 +44,8 @@ class TestPendulum(unittest.TestCase):
                     cases.append(Case(states_0, controls_0, states_delta, controls_delta))
 
     def setUp(self):
-        self.problem = InvertedPendulum()
+        dt = 1e-2
+        self.problem = CartPole(dt)
 
     @genty_dataset(
         *cases
@@ -63,7 +63,7 @@ class TestPendulum(unittest.TestCase):
 
     def compare_jacobian(self, A, B, states_0, controls_0, states_delta, controls_delta, derivatives_0):
 
-        linear = torch.matmul(A, states_delta) + torch.matmul(B, controls_delta) + derivatives_0
+        linear = np.matmul(A, states_delta) + np.matmul(B, controls_delta) + derivatives_0
         nonlinear = self.problem.derivatives(states_delta + states_0, controls_delta + controls_0)
         [self.assertAlmostEqual(l, n, places=4) for l, n in zip(linear.tolist(), nonlinear.tolist())]
 
@@ -73,26 +73,14 @@ class TestPendulum(unittest.TestCase):
         dA_nonlinear = A_nonlinear - A
         dB_nonlinear = B_nonlinear - B
 
-        A_rows = []
-        B_rows = []
+        dA_linear = np.tensordot(hessian[0][0], np.expand_dims(states_delta, 0).T, 1).squeeze() + \
+            np.tensordot(hessian[0][1], np.expand_dims(controls_delta, 0).T, 1).squeeze()
 
-        for hess in hessian:
+        dB_linear = np.tensordot(hessian[1][0], np.expand_dims(states_delta, 0).T, 1).squeeze() + \
+            np.tensordot(hessian[1][1], np.expand_dims(controls_delta, 0).T, 1).squeeze()
 
-            # TODO: cat hess[0][0] & hess[0][1] along axis 1, cat states, controls along axis 0
-            A_rows.append(
-                torch.matmul(hess[0][0], states_delta) +  # Txx
-                torch.matmul(hess[0][1], controls_delta)  # Txu
-            )
-            B_rows.append(
-                torch.matmul(hess[1][0], states_delta) +  # Tux
-                torch.matmul(hess[1][1], controls_delta)  # Tuu
-            )
-
-        dA_linear = torch.stack(A_rows)
-        dB_linear = torch.stack(B_rows)
-
-        self.assertTrue(torch.allclose(dA_linear, dA_nonlinear, atol=5e-5))
-        self.assertTrue(torch.allclose(dB_linear, dB_nonlinear, atol=5e-5))
+        self.assertTrue(np.allclose(dA_linear, dA_nonlinear, atol=5e-5))
+        self.assertTrue(np.allclose(dB_linear, dB_nonlinear, atol=5e-5))
 
 
 if __name__ == "__main__":
