@@ -6,6 +6,8 @@ from paddington.examples.models.nonlinear.cart_pole import CartPole
 from paddington.solvers.ilqr import iLQR
 from paddington.tools.controls_tools import (diagonalize,
                                              quadratic_cost_function)
+debug = False
+config.update("jax_debug_nans", debug)
 
 dt = 1e-2
 plant = CartPole(dt)
@@ -26,12 +28,12 @@ g_x = np.array([[0.0, 0.0, 0.0, 0.0]])
 g_u = np.array([[0.0]])
 terminal_cost_function = quadratic_cost_function(g_xx=g_xx, g_xu=g_xu, g_ux=g_ux, g_uu=g_uu, g_x=g_x, g_u=g_u)
 
-'''
-Likely one of the causes for failure is the quality of the initial guess
-Could do multiple seeds of random inputs
-'''
-
-solver = iLQR(plant=plant, running_cost_function=running_cost_function, terminal_cost_function=terminal_cost_function)
+solver = iLQR(plant=plant,
+              running_cost_function=running_cost_function,
+              terminal_cost_function=terminal_cost_function,
+              debug=debug,
+              order=1
+              )
 
 states_initial = np.array([[5.0], [0.0], [np.deg2rad(180)], [0.0]])
 time_total = 10
