@@ -1,6 +1,6 @@
 import jax.numpy as np
 
-from paddington.plants.nonlinear_model import NonLinearModel
+from sim.plants import NonLinearModel
 
 
 class CartPole(NonLinearModel):

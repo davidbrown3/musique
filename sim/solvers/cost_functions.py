@@ -2,12 +2,6 @@ import jax
 import jax.numpy as np
 
 
-def continuous_to_discrete(A, B, dt):
-    Ad = np.eye(len(A)) + dt * A
-    Bd = dt * B
-    return Ad, Bd
-
-
 class cost_function():
 
     def calculate_cost(self, x, u):
@@ -71,8 +65,3 @@ class quadratic_cost_function(cost_function):
 
     def _calculate_g_u(self, x, u):
         return np.matmul(self.g_ux, x) + np.matmul(self.g_uu, u) + self.g_u
-
-
-def diagonalize(diagonal):
-
-    return np.eye(len(diagonal)) * diagonal

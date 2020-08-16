@@ -4,11 +4,11 @@ with open("readme.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="paddington",
+    name="sim",
     version="0.0.1",
     author="David Browne",
     author_email="davidbrowne@outlook.com",
-    description="A small example package",
+    description="A library to support simulation",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",
@@ -18,5 +18,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6.9',
+    python_requires='>=3.7',
 )

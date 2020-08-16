@@ -1,10 +1,9 @@
 import jax
 import jax.numpy as np
+import scipy
 
-from paddington.solvers.lqr import LQR
 
-
-class iLQR:
+class DifferentialDynamicProgramming:
 
     def __init__(self, plant, running_cost_function, terminal_cost_function, order=1, debug=False):
 
@@ -46,26 +45,25 @@ class iLQR:
                 self._backward_pass_loop = jax.jit(self.backward_pass_loop_2nd_jit)
                 self._backward_pass_loop_jit_inner = jax.jit(self.backward_pass_loop_2nd_jit_inner)
 
-    def initial_guess_lqr(self, states_initial, time_total):
+    def infinite_horizon_lqr(self, x, u):
 
-        controls_initial = np.zeros([self.plant.N_u, 1])
-        A_d, B_d = self.plant.calculate_statespace_discrete(states_initial[:, 0], controls_initial[:, 0])
+        A_d, B_d = self.plant.calculate_statespace_discrete(x[:, 0], u[:, 0])
 
-        lqr = LQR(T_x=A_d,
-                  T_u=B_d,
-                  g_x=self.running_cost_function.calculate_g_x(x=states_initial, u=controls_initial),
-                  g_u=self.running_cost_function.calculate_g_u(x=states_initial, u=controls_initial),
-                  g_xx=self.running_cost_function.g_xx,
-                  g_uu=self.running_cost_function.g_uu,
-                  g_xu=self.running_cost_function.g_xu,
-                  g_ux=self.running_cost_function.g_ux,
-                  dt=self.plant.dt)
+        P = scipy.linalg.solve_discrete_are(A_d,
+                                            B_d,
+                                            self.terminal_cost_function.g_xx*1e-5,
+                                            self.running_cost_function.g_uu).squeeze()
 
-        return lqr.K_horizon(500)
+        beta = -np.linalg.solve(
+            a=self.running_cost_function.g_uu + np.matmul(B_d.T, np.matmul(P, B_d)),
+            b=np.matmul(B_d.T, np.matmul(P, A_d)) + 2 * self.running_cost_function.g_ux
+        )
+
+        return beta
 
     def solve(self, states_initial, time_total, convergence=1e-4):
 
-        beta, alpha = self.initial_guess_lqr(states_initial=states_initial, time_total=time_total)
+        beta = self.infinite_horizon_lqr(x=states_initial, u=np.zeros([self.plant.N_u, 1]))
 
         N_steps = int(time_total / self.plant.dt)
         xs = np.zeros([N_steps, self.plant.N_x])

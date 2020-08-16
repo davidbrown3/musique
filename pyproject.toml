@@ -1,0 +1,12 @@
+[tool.poetry]
+name = "sim"
+version = "0.0.1"
+description = ""
+authors = ["David Browne <davidbrowne@outlook.com>"]
+
+[tool.poetry.dependencies]
+python = "*"
+jax
+
+[tool.poetry.dev-dependencies]
+genty

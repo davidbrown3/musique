@@ -4,7 +4,7 @@ from collections import namedtuple
 import jax.numpy as np
 from genty import genty, genty_dataset
 
-from paddington.examples.models.nonlinear.cart_pole import \
+from sim.examples.models.nonlinear.cart_pole import \
     CartPole
 
 
