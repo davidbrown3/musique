@@ -1,12 +1,14 @@
 [tool.poetry]
-name = "sim"
-version = "0.0.1"
+name = "simdynamics"
+version = "0.1.0"
 description = ""
 authors = ["David Browne <davidbrowne@outlook.com>"]
 
 [tool.poetry.dependencies]
-python = "*"
-jax
+python = "^3.7"
+jax = "*"
+jaxlib = "*"
+scipy = "*"
 
 [tool.poetry.dev-dependencies]
-genty
+genty = "*"

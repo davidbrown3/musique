@@ -5,7 +5,7 @@ import jax
 import jax.numpy as np
 from genty import genty, genty_dataset
 
-from sim.solvers.controls_tools import quadratic_cost_function
+from simdynamics.solvers.controls_tools import quadratic_cost_function
 
 
 @ genty

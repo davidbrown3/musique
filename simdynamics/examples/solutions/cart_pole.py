@@ -2,9 +2,9 @@ import jax.numpy as np
 import plotly.graph_objects as go
 from jax.config import config
 
-from sim.examples.models import CartPole
-from sim.solvers.trajectory import DifferentialDynamicProgramming
-from sim.solvers import quadratic_cost_function
+from simdynamics.examples.models import CartPole
+from simdynamics.solvers.trajectory import DifferentialDynamicProgramming
+from simdynamics.solvers import quadratic_cost_function
 
 debug = False
 config.update("jax_debug_nans", debug)
