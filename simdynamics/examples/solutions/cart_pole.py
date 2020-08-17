@@ -1,3 +1,5 @@
+import json
+import pandas as pd
 import jax.numpy as np
 import plotly.graph_objects as go
 from jax.config import config
@@ -39,6 +41,13 @@ states_initial = np.array([[5.0], [0.0], [np.deg2rad(180)], [0.0]])
 time_total = 10
 
 xs, us, costs = solver.solve(states_initial, time_total)
+
+with open('cartpole.json', 'w') as f:
+    json.dump(
+        dict(
+            position=[float(x) for x in xs[:, 0]],
+            angle=[float(x) for x in xs[:, 2]]
+        ), f)
 
 fig = go.Figure()
 
