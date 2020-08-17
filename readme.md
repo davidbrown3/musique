@@ -1,3 +1,3 @@
 # SimDynamics
 
-![gif](https://media.giphy.com/media/fshr81WuG8GJDMRpFL/giphy.gif)
+![gif](https://media.giphy.com/media/J1LvVM75Qn9akLMcPn/giphy.gif)
