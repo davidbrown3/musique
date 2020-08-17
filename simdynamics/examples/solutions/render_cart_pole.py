@@ -96,7 +96,7 @@ bpy.data.objects['Camera'].rotation_euler[0] = np.deg2rad(-100)
 bpy.data.objects['Camera'].rotation_euler[1] = np.pi
 bpy.data.objects['Camera'].rotation_euler[2] = -np.pi/2
 
-for position, angle in zip(positions, angles):
+for position, angle in zip(positions[::2], angles[::2]):
 
     bpy.context.scene.frame_set(frame_num)
 
@@ -143,12 +143,12 @@ for area in bpy.context.screen.areas:
 bpy.data.objects['GridLines'].show_all_edges = True
 
 rnd = bpy.data.scenes['Scene'].render
-rnd.fps = 100
-rnd.image_settings.file_format = 'FFMPEG'
+rnd.fps = 50
+rnd.image_settings.file_format = 'AVI_JPEG'
 rnd.resolution_x = 1280
 rnd.resolution_y = 550
 rnd.resolution_percentage = 100
-rnd.filepath = os.path.join(directory, 'test.avi')
+rnd.filepath = os.path.join(directory, 'output', 'test')
 
 for scene in bpy.data.scenes:
     scene.render.engine = 'BLENDER_WORKBENCH'

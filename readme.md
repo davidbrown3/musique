@@ -1,1 +1,3 @@
-![gif](https://gfycat.com/orderlydeadlyjapanesebeetle.gif)
+# SimDynamics
+
+![gif](https://media.giphy.com/media/fshr81WuG8GJDMRpFL/giphy.gif)
