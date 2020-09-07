@@ -1,6 +1,7 @@
 import jax
 import jax.numpy as np
 import scipy
+import tqdm
 
 
 class DifferentialDynamicProgramming:
@@ -61,7 +62,7 @@ class DifferentialDynamicProgramming:
 
         return beta
 
-    def solve(self, states_initial, time_total, convergence=1e-4):
+    def solve(self, states_initial, time_total, convergence=1e-4, iterations=300):
 
         beta = self.infinite_horizon_lqr(x=states_initial, u=np.zeros([self.plant.N_u, 1]))
 
@@ -74,7 +75,7 @@ class DifferentialDynamicProgramming:
         xs, us = self.forward_pass(np.squeeze(states_initial), xs, us, betas, alphas)
 
         costs = []
-        for _ in range(300):
+        for _ in tqdm.trange(iterations):
             betas, alphas = self._backward_pass(xs=xs, us=us)
             xs, us = self._forward_pass(xi=np.squeeze(states_initial), xs=xs, us=us, betas=betas, alphas=alphas)
             cost = self._calculate_cost(xs, us)
