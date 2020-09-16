@@ -62,7 +62,7 @@ class DifferentialDynamicProgramming:
 
         return beta
 
-    def solve(self, states_initial, time_total, convergence=1e-4, iterations=300):
+    def solve(self, states_initial, time_total, convergence=1e-4, iterations=50, line_alpha=1e-2):
 
         beta = self.infinite_horizon_lqr(x=states_initial, u=np.zeros([self.plant.N_u, 1]))
 
@@ -72,14 +72,27 @@ class DifferentialDynamicProgramming:
         betas = np.tile(beta, (N_steps, 1, 1))
         alphas = np.zeros([N_steps, self.plant.N_u])
 
-        xs, us = self.forward_pass(np.squeeze(states_initial), xs, us, betas, alphas)
+        xs, us = self.forward_pass(xi=np.squeeze(states_initial), xs=xs, us=us, betas=betas, alphas=alphas, line_alpha=line_alpha)
 
         costs = []
         for _ in tqdm.trange(iterations):
             betas, alphas = self._backward_pass(xs=xs, us=us)
-            xs, us = self._forward_pass(xi=np.squeeze(states_initial), xs=xs, us=us, betas=betas, alphas=alphas)
+
+            # Running pertubation
+            dline_alpha = line_alpha * 1e-4
+            xs_, us_ = self._forward_pass(xi=np.squeeze(states_initial), xs=xs, us=us, betas=betas, alphas=alphas, line_alpha=line_alpha+dline_alpha)
+            peturbed_cost = self._calculate_cost(xs_, us_)
+
+            # Running regular
+            xs, us = self._forward_pass(xi=np.squeeze(states_initial), xs=xs, us=us, betas=betas, alphas=alphas, line_alpha=line_alpha)
             cost = self._calculate_cost(xs, us)
+
             costs.append(cost)
+
+            dcost_dlinealpha = (peturbed_cost - cost) / dline_alpha
+            line_alpha -= dcost_dlinealpha * 1e-2
+
+        xs, us = self._forward_pass(xi=np.squeeze(states_initial), xs=xs, us=us, betas=betas, alphas=alphas, line_alpha=line_alpha)
 
         return xs, us, costs
 
@@ -280,7 +293,7 @@ class DifferentialDynamicProgramming:
 
         return beta, alpha
 
-    def forward_pass(self, xi, xs, us, betas, alphas, line_alpha=1e-2):
+    def forward_pass(self, xi, xs, us, betas, alphas, line_alpha):
         x_ = xi
         data = (xs, us, betas, alphas, x_, line_alpha)
         data = jax.lax.fori_loop(0, xs.shape[0], self._forward_pass_inner, data)
